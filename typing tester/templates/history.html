@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Typing History - Typing Tester</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav id="navbar">
+    <h1>📜 {{ user|capitalize }}'s Typing History</h1>
+    <div>
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('leaderboard') }}">Leaderboard</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 class="page-title">Your Performance Summary</h2>
+
+    <table class="styled-table" id="history-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Difficulty</th>
+          <th>WPM</th>
+          <th>Accuracy (%)</th>
+          <th>Time Taken (s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="5" style="text-align:center;">Loading your history...</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="btn-group">
+      <button id="refresh-btn" class="btn">🔄 Refresh</button>
+      <a href="{{ url_for('download_report') }}" class="btn">📥 Download PDF Report</a>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 Typing Tester | Consistency is the key to speed.
+  </footer>
+
+  <script>
+    async function loadHistory() {
+      const res = await fetch("/get_history");
+      const data = await res.json();
+      const tableBody = document.querySelector("#history-table tbody");
+      tableBody.innerHTML = "";
+
+      if (data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No history available yet.</td></tr>`;
+        return;
+      }
+
+      data.reverse().forEach(entry => {
+        const row = `
+          <tr>
+            <td>${entry.timestamp}</td>
+            <td>${entry.level.charAt(0).toUpperCase() + entry.level.slice(1)}</td>
+            <td>${entry.wpm}</td>
+            <td>${entry.accuracy}</td>
+            <td>${entry.elapsed}</td>
+          </tr>
+        `;
+        tableBody.insertAdjacentHTML("beforeend", row);
+      });
+    }
+
+    document.getElementById("refresh-btn").addEventListener("click", loadHistory);
+    loadHistory();
+  </script>
+</body>
+</html>
