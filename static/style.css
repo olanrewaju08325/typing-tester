@@ -821,3 +821,65 @@ nav span {
 header h1 {
   animation: pulse-glow 3s infinite ease-in-out;
 }
+/* === Upgrade Banner Styles === */
+.update-banner {
+  background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+  color: #f8fafc;
+  border: 2px solid #22d3ee;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 40px auto;
+  max-width: 720px;
+  box-shadow: 0 0 25px rgba(34, 211, 238, 0.4);
+  animation: fadeIn 1.2s ease-out;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.update-banner h2 {
+  font-size: 1.8rem;
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.update-banner ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.update-banner ul li {
+  margin: 4px 0;
+  color: #bae6fd;
+  font-weight: 500;
+}
+
+.update-banner .highlight {
+  color: #38bdf8;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-25px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Footer Version Note === */
+.version-note {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  padding: 20px 0;
+  font-family: "Poppins", sans-serif;
+  border-top: 1px solid #1f2937;
+  margin-top: 60px;
+}
+
+.version-note .highlight {
+  color: #38bdf8;
+  font-weight: bold;
+}

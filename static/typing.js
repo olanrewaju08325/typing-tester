@@ -393,15 +393,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   try {
     // ✅ Build complete data to send to Flask
-    const payload = {
-      username: window.currentUser?.username || "Guest",
-      plan: window.currentUser?.plan || "free",
-      level: level || "beginner",
-      wpm,
-      accuracy,
-      time: levelDurations[level] - timeLeft, // correct time spent
-      status: "completed"
-    };
+const payload = {
+  username: window.currentUser?.username || "Guest",
+  plan: window.currentUser?.plan || "free",
+  difficulty: level || "beginner",  // ✅ use “difficulty” key to match table
+  wpm,
+  accuracy,
+  time: levelDurations[level] - timeLeft,
+  status: "completed"
+};
 
     // ✅ Send to Flask /save_history endpoint
     const res = await fetch("/save_history", {

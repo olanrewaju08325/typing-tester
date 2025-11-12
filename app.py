@@ -409,40 +409,95 @@ def admin_dashboard():
 @app.route("/api/leaderboard")
 def api_leaderboard():
     """
-    Returns the leaderboard as JSON for live updates.
+    Return leaderboard entries with safe parsing and normalized keys.
+    Produces records like: { username, level, wpm, accuracy }
     """
+    # Attempt to load central HISTORY_FILE or per-user files in data/history
+    leaderboard = []
+
+    # Option A: if you maintain a HISTORY_FILE dict mapping username->runs
     try:
-        # Load from the same file your /leaderboard route uses
-        history = load_json(HISTORY_FILE, {})
-        scores = []
-        for uname, runs in history.items():
-            # runs may be stored in different formats; ensure type-safety
-            if not runs or not isinstance(runs, list):
-                continue
-            wpms = []
-            for r in runs:
-                try:
-                    wpms.append(int(float(r.get("wpm", 0))))
-                except Exception:
+        if os.path.exists(HISTORY_FILE):
+            hist_data = load_json(HISTORY_FILE, {})
+            # hist_data could be {username: [runs...], ...}
+            for uname, runs in hist_data.items():
+                if not runs:
                     continue
-            if not wpms:
-                continue
-            best = max(wpms)
-            # pick last run's difficulty/accuracy if available, else safe defaults
-            last = runs[-1] if runs else {}
-            level = last.get("difficulty", last.get("level", "N/A"))
-            accuracy = last.get("accuracy", 0)
-            scores.append({
-                "username": uname,
-                "level": level,
-                "wpm": best,
-                "accuracy": accuracy
-            })
-        scores = sorted(scores, key=lambda x: x["wpm"], reverse=True)
-        return jsonify(scores)
+                # pick best wpm from runs
+                try:
+                    wpms = [int(float(r.get("wpm", 0) or 0)) for r in runs if r]
+                    best = max(wpms) if wpms else 0
+                except Exception:
+                    best = 0
+                last = runs[-1] if runs else {}
+                level = last.get("level") or last.get("difficulty") or "unknown"
+                accuracy_raw = last.get("accuracy", 0)
+                try:
+                    if isinstance(accuracy_raw, str):
+                        accuracy_val = float(accuracy_raw.strip().replace("%", "")) if accuracy_raw.strip() else 0.0
+                    else:
+                        accuracy_val = float(accuracy_raw or 0)
+                except Exception:
+                    accuracy_val = 0.0
+
+                leaderboard.append({
+                    "username": uname,
+                    "level": level,
+                    "wpm": int(best),
+                    "accuracy": round(accuracy_val, 2)
+                })
+            # sort by wpm desc
+            leaderboard = sorted(leaderboard, key=lambda x: x.get("wpm", 0), reverse=True)
+            return jsonify(leaderboard)
     except Exception as e:
-        print(f"[ERROR] /api/leaderboard → {e}")
-        return jsonify([]), 500
+        print("[API_LEADERBOARD] history file path approach failed:", e)
+
+    # Option B: fallback to scanning data/history per-user json files
+    try:
+        history_dir = os.path.join("data", "history")
+        if os.path.isdir(history_dir):
+            for fname in os.listdir(history_dir):
+                if not fname.endswith(".json"):
+                    continue
+                uname = os.path.splitext(fname)[0]
+                try:
+                    with open(os.path.join(history_dir, fname), "r", encoding="utf-8") as f:
+                        runs = json.load(f) or []
+                except Exception:
+                    runs = []
+                if not runs:
+                    continue
+                # compute best wpm and last run metadata
+                try:
+                    wpms = [int(float(r.get("wpm", 0) or 0)) for r in runs if r]
+                    best = max(wpms) if wpms else 0
+                except Exception:
+                    best = 0
+                last = runs[-1] if runs else {}
+                level = last.get("level") or last.get("difficulty") or "unknown"
+                accuracy_raw = last.get("accuracy", 0)
+                try:
+                    if isinstance(accuracy_raw, str):
+                        accuracy_val = float(accuracy_raw.strip().replace("%", "")) if accuracy_raw.strip() else 0.0
+                    else:
+                        accuracy_val = float(accuracy_raw or 0)
+                except Exception:
+                    accuracy_val = 0.0
+
+                leaderboard.append({
+                    "username": uname,
+                    "level": level,
+                    "wpm": int(best),
+                    "accuracy": round(accuracy_val, 2)
+                })
+
+            leaderboard = sorted(leaderboard, key=lambda x: x.get("wpm", 0), reverse=True)
+            return jsonify(leaderboard)
+    except Exception as e:
+        print("[API_LEADERBOARD] fallback per-user scan failed:", e)
+
+    # Final fallback: empty list
+    return jsonify([])
 
 
 
@@ -470,18 +525,74 @@ def leaderboard():
 def api_history():
     """
     Returns the logged-in user's typing history as JSON.
+    Normalizes older entries (ensures status, level and numeric accuracy).
     """
-    user = current_user()
+    user = None
+    try:
+        user = current_user()
+    except Exception:
+        user = None
+
     if not user:
         return jsonify({"error": "Not logged in"}), 401
 
-    try:
-        history = load_json(HISTORY_FILE, {})
-        runs = history.get(user["username"], [])
-        return jsonify(runs)
-    except Exception as e:
-        print(f"[ERROR] /api/history → {e}")
-        return jsonify([]), 500
+    username = user.get("username", None) or session.get("username", "Guest")
+    user_file = os.path.join("data/history", f"{username}.json")
+
+    history = []
+    if os.path.exists(user_file):
+        try:
+            with open(user_file, "r", encoding="utf-8") as f:
+                history = json.load(f) or []
+        except Exception as e:
+            print(f"[API_HISTORY] Failed to read {user_file}: {e}")
+            history = []
+
+    # normalization helper
+    def normalize(entry):
+        e = dict(entry)  # shallow copy
+        # ensure level
+        e["level"] = e.get("level") or e.get("difficulty") or "beginner"
+        # ensure numeric accuracy
+        acc = e.get("accuracy", 0)
+        try:
+            if isinstance(acc, str):
+                acc = acc.strip().replace("%", "")
+            e["accuracy"] = float(acc) if acc != "" else 0.0
+        except Exception:
+            try:
+                e["accuracy"] = float(str(acc).replace("%", ""))
+            except Exception:
+                e["accuracy"] = 0.0
+        # ensure numeric wpm/time
+        try:
+            e["wpm"] = int(float(e.get("wpm", 0) or 0))
+        except Exception:
+            e["wpm"] = 0
+        try:
+            e["time"] = int(float(e.get("time", 0) or 0))
+        except Exception:
+            e["time"] = 0
+        # status default
+        e["status"] = e.get("status") or "completed"
+        # timestamp & date fallback
+        if not e.get("timestamp") and e.get("date"):
+            # attempt parse date into timestamp if possible
+            try:
+                e["timestamp"] = int(time.mktime(time.strptime(e["date"], "%Y-%m-%d %H:%M:%S")))
+            except Exception:
+                e["timestamp"] = int(time.time())
+        if not e.get("date"):
+            e["date"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(e.get("timestamp", time.time())))
+        return e
+
+    normalized = [normalize(h) for h in history]
+
+    # optional: sort by timestamp newest first
+    normalized.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
+
+    return jsonify(normalized)
+
 
 @app.route("/upgrade", methods=["GET", "POST"])
 def upgrade():
@@ -941,48 +1052,80 @@ def add_no_cache_headers(response):
     if request.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return response
-# ============================================================
-# ✅ ENHANCED HISTORY SAVER — includes username + plan + level
 @app.route("/save_history", methods=["POST"])
 def save_history():
-    """Save typing test result to the user's history"""
-    data = request.get_json()
+    """Save typing test result to the user's history (safe parsing + normalized fields)."""
+    try:
+        data = request.get_json() or {}
+    except Exception:
+        data = {}
+
     username = session.get("username", "Guest")
     plan = session.get("plan", "Free")
 
+    # Safe helpers
+    def parse_number(val, default=0):
+        try:
+            if val is None:
+                return default
+            if isinstance(val, (int, float)):
+                return val
+            s = str(val).strip()
+            # remove trailing percent sign if present
+            s = s.replace("%", "")
+            return float(s) if ('.' in s) else int(s)
+        except Exception:
+            try:
+                return float(str(val).replace("%", ""))  # final attempt
+            except Exception:
+                return default
+
+    # Normalize level/difficulty
+    lvl = data.get("level") or data.get("difficulty") or "beginner"
+
+    # Build entry with normalized types and defaults
+
     entry = {
-        "wpm": data.get("wpm", 0),
-        "accuracy": data.get("accuracy", 0),
-        "time": data.get("time", 0),
-        "level": data.get("level", "Unknown"),
-        "date": time.strftime("%Y-%m-%d %H:%M:%S"),
-    }
+    "username": username,
+    "plan": plan,
+    "level": lvl,
+    "difficulty": lvl,  # ✅ ensures both keys exist for front-end compatibility
+    "wpm": int(float(data.get("wpm", 0) or 0)),
+    "accuracy": float(data.get("accuracy", 0) or 0),
+    "time": data.get("time", 0),
+    "status": data.get("status", "completed"),
+    "timestamp": int(time.time()),
+    "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+}
 
-    # Create directory if not exists
+
+    # Ensure data dir
     os.makedirs("data/history", exist_ok=True)
-
-    # File per user
     user_file = os.path.join("data/history", f"{username}.json")
+
+    # Load existing history if present
     history = []
     if os.path.exists(user_file):
         try:
             with open(user_file, "r", encoding="utf-8") as f:
-                history = json.load(f)
+                history = json.load(f) or []
         except Exception:
             history = []
 
-    # Append new entry
+    # Append and save
     history.append(entry)
-    with open(user_file, "w", encoding="utf-8") as f:
-        json.dump(history, f, indent=2)
+    try:
+        with open(user_file, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2)
+    except Exception as e:
+        print(f"[SAVE_HISTORY] Failed to write {user_file}: {e}")
+        return jsonify({"success": False, "message": "Failed to save history"}), 500
 
     # Debug log
-    print(
-        f"[SAVE_HISTORY] {username} ({plan}) — "
-        f"{entry['wpm']} WPM, {entry['accuracy']}%, {entry['level']}"
-    )
+    print(f"[SAVE_HISTORY] {username} ({plan}) — {entry['wpm']} WPM, {entry['accuracy']}%, {entry['level']}")
 
-    return jsonify({"success": True, "message": "History saved!"})
+    return jsonify({"success": True, "message": "History saved!", "entry": entry})
+
 
 
 # -----------------------------------------------------

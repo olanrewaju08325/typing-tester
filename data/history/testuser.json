@@ -1,9 +1,35 @@
 [
   {
-    "wpm": 33,
-    "accuracy": 100,
-    "time": 8,
+    "username": "testuser",
+    "plan": "free",
     "level": "easy",
-    "date": "2025-11-12 17:24:35"
+    "wpm": 34,
+    "accuracy": 100.0,
+    "time": 8,
+    "status": "completed",
+    "timestamp": 1762986350,
+    "date": "2025-11-12 23:25:50"
+  },
+  {
+    "username": "testuser",
+    "plan": "free",
+    "level": "easy",
+    "wpm": 12,
+    "accuracy": 50.0,
+    "time": 30,
+    "status": "completed",
+    "timestamp": 1762989921,
+    "date": "2025-11-13 00:25:21"
+  },
+  {
+    "username": "testuser",
+    "plan": "Free",
+    "level": "easy",
+    "wpm": 37,
+    "accuracy": 100.0,
+    "time": 8,
+    "status": "completed",
+    "timestamp": 1762990873,
+    "date": "2025-11-13 00:41:13"
   }
 ]
