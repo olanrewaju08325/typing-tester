@@ -1,0 +1,410 @@
+/* =====================================
+   Typing Tester - Monkeytype Inspired
+   ===================================== */
+
+/* Reset & General */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background: #0d0d0d;
+  color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Navbar */
+nav {
+  background: #111;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 40px;
+  border-bottom: 1px solid #222;
+}
+
+nav a {
+  color: #f5f5f5;
+  text-decoration: none;
+  margin-left: 20px;
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+}
+
+nav a:hover {
+  color: #facc15;
+}
+
+/* Main Container */
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* Title */
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 25px;
+  color: #facc15;
+  text-align: center;
+}
+
+/* Difficulty Selector */
+.selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+label {
+  font-size: 1rem;
+  color: #f5f5f5;
+}
+
+.dropdown {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.dropdown:focus {
+  border-color: #facc15;
+}
+
+/* Buttons */
+button, .btn {
+  background: #facc15;
+  color: #0d0d0d;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover, .btn:hover {
+  background: #ffe55b;
+}
+
+/* Typing Box */
+.typing-box {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 25px;
+  width: 100%;
+  max-width: 700px;
+  font-size: 1.2rem;
+  color: #f5f5f5;
+  line-height: 1.6;
+  min-height: 150px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+/* Progress Bar */
+.progress-container {
+  width: 100%;
+  max-width: 700px;
+  height: 6px;
+  background: #222;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+#progress-bar {
+  height: 100%;
+  width: 0;
+  background: #facc15;
+  transition: width 0.3s ease;
+}
+
+/* Timer & Textarea */
+.timer {
+  color: #aaa;
+  margin-bottom: 10px;
+}
+
+textarea {
+  width: 100%;
+  max-width: 700px;
+  background: #111;
+  color: #f5f5f5;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 1rem;
+  outline: none;
+  resize: none;
+  margin-bottom: 20px;
+}
+
+textarea:focus {
+  border-color: #facc15;
+}
+
+/* Results */
+.result-box {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 30px;
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.result-box h3 {
+  color: #facc15;
+  margin-bottom: 15px;
+}
+
+.result-box p {
+  margin: 8px 0;
+}
+
+/* Flash Messages */
+.flash {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Footer */
+footer {
+  background: #111;
+  text-align: center;
+  padding: 12px;
+  color: #666;
+  font-size: 0.85rem;
+  border-top: 1px solid #222;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .selector {
+    flex-direction: column;
+  }
+  .typing-box, textarea {
+    max-width: 100%;
+  }
+}
+/* Auto-hide Navbar */
+#navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  transition: transform 0.4s ease;
+  z-index: 1000;
+}
+
+#navbar.hide {
+  transform: translateY(-100%);
+}
+.typing-box {
+  background: #111;
+  border-radius: 15px;
+  padding: 20px;
+  font-size: 1.3rem;
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.8;
+  color: #eee;
+  box-shadow: 0 0 10px #000;
+  min-height: 100px;
+  user-select: none;
+}
+
+.correct {
+  color: #00ff99;
+  transition: color 0.2s;
+}
+
+.incorrect {
+  color: #ff4d4d;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+/* Per-character coloring for display text */
+.display-text { font-size: 1.05rem; line-height: 1.6; word-wrap: break-word; }
+.display-text .char { transition: color 0.12s ease, background 0.12s ease; padding: 0 1px; border-radius: 3px; }
+.display-text .char.neutral { color: #fff; background: transparent; }
+.display-text .char.correct { color: #00ff99; background: rgba(0,255,153,0.06); text-shadow: 0 0 8px rgba(0,255,153,0.1); }
+.display-text .char.wrong { color: #ff6b6b; background: rgba(255,107,107,0.06); text-shadow: 0 0 8px rgba(255,107,107,0.06); }
+
+/* Progress bar */
+.progress-container { width: 100%; background: rgba(255,255,255,0.06); height: 8px; border-radius: 8px; overflow: hidden; margin-top:10px; }
+#progress-bar { height: 100%; width: 0; background: linear-gradient(90deg,#00bfff,#00ff99); transition: width 0.3s ease; }
+
+/* Results & save status */
+.result-box { background: rgba(255,255,255,0.04); padding: 14px; border-radius: 10px; margin-top:12px; }
+.save-status { color: #aaa; font-size: 0.95rem; margin-top:8px; }
+.save-status.saved { color: #00ff99; font-weight:600; }
+.hidden { display: none; }
+
+/* small mobile adjustment */
+@media (max-width: 600px) {
+  .display-text { font-size: 0.95rem; }
+  .typing-box { padding: 12px; }
+}
+/* === Table Styles === */
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: #1c1c1c;
+  color: #fff;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.styled-table thead {
+  background-color: #00b894;
+  color: #fff;
+}
+
+.styled-table th, .styled-table td {
+  padding: 12px 15px;
+  text-align: center;
+}
+
+.styled-table tr:nth-child(even) {
+  background-color: #2b2b2b;
+}
+
+.styled-table tr:hover {
+  background-color: #00b89422;
+}
+
+.highlight-user {
+  font-weight: 700;
+  color: #00ffcc;
+}
+
+/* === Buttons === */
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  background: #00b894;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  margin-top: 15px;
+  text-decoration: none;
+  transition: background 0.3s;
+}
+
+.btn:hover {
+  background: #019170;
+}
+
+.btn-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+/* ===== Donate Section ===== */
+.donate-section {
+  margin-top: 40px;
+  padding: 30px;
+  text-align: center;
+  background: linear-gradient(135deg, #1b1b1b, #2d2d2d);
+  border-radius: 16px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  color: #eee;
+  transition: all 0.3s ease-in-out;
+}
+
+.donate-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 25px rgba(0,255,204,0.2);
+}
+
+.donate-section h2 {
+  color: #00ffcc;
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+.donation-box {
+  background: #242424;
+  display: inline-block;
+  padding: 20px 30px;
+  border-radius: 12px;
+  margin: 20px 0;
+  text-align: left;
+  color: #fff;
+  box-shadow: inset 0 0 10px rgba(0,255,204,0.1);
+}
+
+.donation-box p {
+  margin: 8px 0;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.copy-btn {
+  background: #00ffcc;
+  color: #111;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 8px;
+}
+
+.copy-btn:hover {
+  background: #00cc99;
+  transform: scale(1.05);
+}
+
+.thank-you {
+  margin-top: 10px;
+  color: #aaa;
+  font-style: italic;
+}
+/* per-character typing feedback */
+.correct { color: #00ff99; background: rgba(0,255,153,0.06); padding: 0 1px; border-radius: 2px; }
+.wrong   { color: #ff6b6b; background: rgba(255,107,107,0.06); padding: 0 1px; border-radius: 2px; }
+.pending { color: #cccccc; }
+
+/* result save status */
+.save-status { font-size: 0.95rem; color: #ddd; }
+.save-status.saved { color: #00ff99; }
+
+/* hide helper class used by script */
+.hidden { display: none !important; }
+

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:420px; margin:0 auto;">
+  <h2 style="margin-bottom:10px;">🔐 Login</h2>
+
+  {% if error %}
+    <div class="flash error">{{ error }}</div>
+  {% endif %}
+
+  <form action="{{ url_for('login') }}" method="post" autocomplete="off" novalidate>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" required />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required />
+
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button type="submit" class="btn">Login</button>
+      <a href="{{ url_for('register') }}" class="btn" style="background:#888;">Register</a>
+    </div>
+  </form>
+
+  <p style="margin-top:12px; font-size:0.9rem;">
+    <a href="{{ url_for('forgot') }}">Forgot password?</a>
+  </p>
+</div>
+{% endblock %}
