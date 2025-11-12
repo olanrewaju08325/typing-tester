@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🕓 Typing History | TypeForge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      background: radial-gradient(circle at top, #0e0e0e, #000);
+      color: #e8f9f4;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .topbar {
+      background: rgba(0,255,204,0.1);
+      backdrop-filter: blur(12px);
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #00ffcc55;
+    }
+    .topbar h1 { color: #00ffcc; margin: 0; font-size: 1.6rem; }
+    .btn.small {
+      background: #00ffcc;
+      color: #000;
+      border-radius: 8px;
+      padding: 8px 14px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+    .btn.small:hover { background: #00ddb3; }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      animation: fadeIn 0.8s ease;
+    }
+    .card {
+      background: rgba(20,20,20,0.8);
+      border: 1px solid #00ffcc33;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 0 25px rgba(0,255,204,0.08);
+      backdrop-filter: blur(8px);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #f5f5f5;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #00ffcc22;
+    }
+    th { color: #00ffcc; font-weight: 700; text-transform: uppercase; }
+    tr:hover { background: rgba(0,255,204,0.05); transition: 0.3s; }
+    footer { text-align: center; margin-top: 50px; color: #666; font-size: 0.9rem; }
+    @keyframes fadeIn { from {opacity: 0; transform: translateY(10px);} to {opacity: 1; transform: translateY(0);} }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🕓 Typing History</h1>
+    <a href="{{ url_for('index') }}" class="btn small">🏠 Home</a>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Your Progress</h2>
+      <p>📈 Track how your speed and accuracy improve with every challenge.</p>
+      <table id="history-table">
+        <thead>
+          <tr><th>Date</th><th>Level</th><th>WPM</th><th>Accuracy</th><th>Time</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td>{{ h.date }}</td>
+            <td>{{ h.level }}</td>
+            <td>{{ h.wpm }}</td>
+            <td>{{ h.accuracy }}%</td>
+            <td>{{ h.time }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <footer>© 2025 TypeForge — Created by <strong>Olanrewaju Abdulmuiz Olamide</strong></footer>
+  <script>
+fetch('/api/history')
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.querySelector('#history-table tbody');
+    tbody.innerHTML = '';
+    data.forEach(h => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${h.date}</td>
+          <td>${h.level}</td>
+          <td>${h.wpm}</td>
+          <td>${h.accuracy}%</td>
+          <td>${h.time}</td>
+          <td>${h.status}</td>
+        </tr>`;
+    });
+  });
+</script>
+
+</body>
+</html>

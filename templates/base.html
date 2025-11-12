@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Typing Tester{% endblock %}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div class="brand-text">Typing Tester</div>
+    </div>
+
+    <nav class="top-right-menu">
+      {% if current_user %}
+        {% if current_user.role == 'admin' %}
+          <a class="btn" href="{{ url_for('admin_dashboard') }}">General Dashboard</a>
+        {% endif %}
+        <a class="pill" href="{{ url_for('leaderboard') }}">Leaderboard</a>
+        <a class="pill" href="{{ url_for('history_view') }}">History</a>
+
+        <form action="{{ url_for('upgrade') }}" method="post" style="display:inline;">
+          <input type="hidden" name="plan" value="premium">
+          <button class="btn small" type="submit">Upgrade</button>
+        </form>
+
+        <a class="pill" href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('login') }}">Login</a>
+        <a class="pill" href="{{ url_for('register') }}">Register</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    Made with ❤️ — Dark Neon Typing Tester © 2025
+  </footer>
+  
+</body>
+</html>

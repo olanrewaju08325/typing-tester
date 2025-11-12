@@ -1,0 +1,10 @@
+python-3.11.9
+
+
+echo "# confirm-typing-tester" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin hzottps://github.com/olanrewaju08325/confirm-typing-tester.git
+git push -u origin main

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Multiplayer | TypeForge</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+body {
+  background:#0b0b0b;color:#f1f1f1;font-family:'Segoe UI',sans-serif;margin:0;padding:0;overflow-x:hidden;
+}
+header {
+  display:flex;justify-content:space-between;align-items:center;
+  background:#111;padding:12px 25px;border-bottom:1px solid #1f1f1f;
+}
+header h1 {color:#00ffcc;font-weight:700;font-size:1.3rem;margin:0;}
+nav a {color:#bbb;margin-left:16px;text-decoration:none;font-size:0.95rem;transition:0.2s;}
+nav a:hover{color:#00ffcc;}
+.container{max-width:900px;margin:50px auto;text-align:center;padding:20px;}
+#countdown{font-size:80px;color:#ffba40;font-weight:900;margin:40px 0;animation:pop 1s ease-in-out;}
+@keyframes pop{0%{opacity:0;transform:scale(0.5);}50%{opacity:1;transform:scale(1.3);}100%{opacity:0;transform:scale(0.8);}}
+#sentence{
+  background:#181818;border-radius:12px;padding:25px;color:#ddd;font-size:1.2rem;
+  margin:20px 0;box-shadow:0 0 10px rgba(0,255,204,0.15);
+}
+#input{width:100%;padding:12px;border-radius:8px;border:none;font-size:1rem;outline:none;margin-bottom:20px;
+  background:#202020;color:#eee;transition:0.3s;}
+#input:disabled{background:#111;color:#555;cursor:not-allowed;}
+#progress-container{margin-top:25px;}
+.player-progress{
+  background:#1b1b1b;border-radius:8px;margin:10px 0;padding:10px;text-align:left;position:relative;height:36px;
+  overflow:hidden;box-shadow:0 0 6px rgba(0,255,204,0.1);
+}
+.player-fill{
+  position:absolute;top:0;left:0;height:100%;width:0%;border-radius:8px;
+  background:linear-gradient(90deg,#00ffcc,#0077ff);transition:width 0.3s ease-out;
+}
+.player-name{position:relative;z-index:2;padding-left:12px;color:#fff;font-weight:600;font-size:0.95rem;}
+.multiplayer-controls{
+  position:fixed;top:14px;right:14px;background:rgba(10,10,10,0.7);
+  border:1px solid rgba(0,255,204,0.1);padding:8px 10px;border-radius:10px;
+  backdrop-filter:blur(6px);z-index:9999;color:#cfeee6;font-size:13px;
+  display:flex;gap:10px;align-items:center;
+}
+.toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+footer{margin-top:40px;color:#777;text-align:center;font-size:0.9rem;}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ TypeForge Multiplayer</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">🏠 Home</a>
+    <a href="{{ url_for('leaderboard') }}">🏆 Leaderboard</a>
+    <a href="{{ url_for('history_view') }}">📜 History</a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h2>Multiplayer Race (Level: {{ level|capitalize }})</h2>
+  <p>Welcome, <strong>{{ current_user.username }}</strong> — Plan: <strong>{{ current_user.plan|capitalize }}</strong></p>
+
+  <div id="sentence">Waiting for sentence...</div>
+  <textarea id="input" placeholder="Start typing here..." disabled></textarea>
+  <div id="countdown"></div>
+  <div id="progress-container"></div>
+  <canvas id="wpmChart" width="600" height="200" style="margin-top:25px;display:none;"></canvas>
+</div>
+
+<footer>
+  Created by <strong>Olanrewaju Abdulmuiz Olamide</strong> — Opay: 8125815188 — © 2025 TypeForge
+</footer>
+
+<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
+
+
+<!-- After -->
+<script src="{{ url_for('static', filename='js/chart.umd.min.js') }}"></script>
+
+
+
+<script>
+const socket = io.connect(window.location.origin);
+const username = "{{ current_user.username }}";
+const level = "{{ level }}";
+
+const sentenceEl = document.getElementById("sentence");
+const inputEl = document.getElementById("input");
+const countdownEl = document.getElementById("countdown");
+const progressContainer = document.getElementById("progress-container");
+const wpmChartEl = document.getElementById("wpmChart");
+
+let players = {};
+let currentSentence = "";
+let started = false;
+let confettiOn = true, soundOn = true;
+let chart, wpmData = [], startTime;
+
+// === SETTINGS TOGGLE ===
+(function setupSettings(){
+  const box = document.createElement('div');
+  box.className='multiplayer-controls';
+  box.innerHTML=`<label class="toggle"><input id="toggleConfetti" type="checkbox" checked>🎉</label>
+                 <label class="toggle"><input id="toggleSound" type="checkbox" checked>🔊</label>`;
+  document.body.appendChild(box);
+  document.getElementById("toggleConfetti").onchange=e=>confettiOn=e.target.checked;
+  document.getElementById("toggleSound").onchange=e=>soundOn=e.target.checked;
+})();
+
+// === JOIN ROOM ===
+socket.emit("join_room",{room:level,username});
+
+// === RECEIVE SENTENCE ===
+socket.on("new_sentence",data=>{
+  if(data.room!==level)return;
+  currentSentence=data.sentence;
+  sentenceEl.textContent=currentSentence;
+  showCountdown(()=>startRace());
+});
+
+// === COUNTDOWN ===
+function showCountdown(cb){
+  const seq=["5","4","3","2","1","GO!"];let i=0;
+  countdownEl.style.display="block";
+  const next=()=>{
+    countdownEl.textContent=seq[i];countdownEl.style.animation="pop 1s ease-in-out";
+    i++; if(i<seq.length)setTimeout(next,900);
+    else setTimeout(()=>{countdownEl.style.display="none";cb();},900);
+  }; next();
+}
+
+// === START RACE ===
+function startRace(){
+  started=true;inputEl.disabled=false;inputEl.focus();startTime=Date.now();
+  if(!chart){
+    chart=new Chart(wpmChartEl.getContext("2d"),{
+      type:'line',
+      data:{labels:[],datasets:[{label:"WPM",data:[],borderColor:"#00ffcc",tension:0.3}]},
+      options:{scales:{x:{ticks:{color:"#999"}},y:{ticks:{color:"#999"}}},plugins:{legend:{labels:{color:"#ccc"}}}}
+    });
+  }
+  wpmChartEl.style.display="block";
+  monitorWPM();
+}
+
+// === MONITOR WPM ===
+function monitorWPM(){
+  if(!started)return;
+  const elapsed=(Date.now()-startTime)/60000;
+  const words=inputEl.value.trim().split(/\s+/).filter(Boolean).length;
+  const wpm=Math.round(words/elapsed||0);
+  wpmData.push(wpm);chart.data.labels.push(wpmData.length);chart.data.datasets[0].data=wpmData;
+  chart.update();
+  setTimeout(monitorWPM,1500);
+}
+
+// === LIVE TYPING ===
+inputEl.addEventListener("input",()=>{
+  if(!started)return;
+  updateColors();
+  const progress=Math.min(100,(inputEl.value.length/currentSentence.length)*100);
+  socket.emit("progress_update",{room:level,username,progress});
+  if(inputEl.value===currentSentence)finishRace();
+});
+
+// === COLOR ACCURACY ===
+function updateColors(){
+  const inputVal=inputEl.value;
+  let html="";
+  for(let i=0;i<currentSentence.length;i++){
+    if(i<inputVal.length){
+      html+=inputVal[i]===currentSentence[i]
+        ?`<span style='color:#00ff99'>${currentSentence[i]}</span>`
+        :`<span style='color:#ff4444'>${currentSentence[i]}</span>`;
+    } else html+=`<span style='color:#777'>${currentSentence[i]}</span>`;
+  }
+  sentenceEl.innerHTML=html;
+}
+
+// === FINISH ===
+
+function finishRace() {
+  if (!started) return;
+  started = false;
+  inputEl.disabled = true;
+  const duration = (Date.now() - startTime) / 1000;
+  const typedText = inputEl.value || "";
+  // send the final typed text to server; server will compute authoritative metrics
+  socket.emit("race_finished", { room: level, username, text: typedText, time: duration });
+  saveHistory(); // optional local save
+  // wait for server 'race_finished' event to show results
+}
+
+
+// === SERVER WINNER ===
+socket.on("race_finished",data=>{
+  if(data.room!==level)return;
+  if(confettiOn)launchConfetti();
+  if(soundOn)playSound();
+  alert(`🏁 Winner: ${data.winner||data.username}`);
+  setTimeout(()=>redirectResults(data.wpm||0,data.accuracy||0,data.time||0,data.winner),800);
+});
+
+// === UPDATE PROGRESS ===
+socket.on("update_progress",data=>{
+  if(data.room&&data.room!==level)return;
+  players=data.players||data;
+  progressContainer.innerHTML="";
+  Object.keys(players).forEach(name=>{
+    const bar=document.createElement("div");
+    bar.className="player-progress";
+    const fill=document.createElement("div");
+    fill.className="player-fill";
+    fill.style.width=players[name]+"%";
+    const label=document.createElement("span");
+    label.className="player-name";
+    label.textContent=`${name} — ${Math.round(players[name])}%`;
+    bar.appendChild(fill);bar.appendChild(label);
+    progressContainer.appendChild(bar);
+  });
+});
+
+// === DISCONNECT ===
+socket.on("disconnect",()=>{
+  inputEl.disabled=true;sentenceEl.textContent="⚠️ Connection lost.";
+});
+
+// === ANTI-CHEAT: PAUSE WHEN NOT FOCUSED ===
+window.addEventListener("blur",()=>{if(started){started=false;inputEl.disabled=true;sentenceEl.textContent="⏸️ Paused (tab inactive)";}});
+window.addEventListener("focus",()=>{if(!started&&currentSentence){sentenceEl.textContent=currentSentence;inputEl.disabled=false;started=true;startTime=Date.now();}});
+
+// === HELPERS ===
+function saveHistory(wpm,acc,time){
+  fetch("/save_history",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({username,level,wpm,accuracy:acc,time,status:"completed"})});
+}
+function redirectResults(wpm,acc,time,winner=""){
+  const q=new URLSearchParams({username,level,wpm,accuracy:acc,time, ...(winner?{winner}:{} )});
+  window.location.replace(`/results?${q}`);
+}
+
+// === CONFETTI + SOUND ===
+function launchConfetti(){
+  const cvs=document.createElement("canvas");
+  cvs.style.position="fixed";cvs.style.left=0;cvs.style.top=0;cvs.width=innerWidth;cvs.height=innerHeight;
+  cvs.style.pointerEvents="none";document.body.appendChild(cvs);
+  const ctx=cvs.getContext("2d");const parts=[];
+  for(let i=0;i<120;i++)parts.push({x:Math.random()*cvs.width,y:Math.random()*-50,
+    vx:(Math.random()-0.5)*6,vy:Math.random()*6+2,w:8,h:6,color:`hsl(${Math.random()*360},80%,60%)`,rot:Math.random()*360});
+  let t=0;const loop=()=>{ctx.clearRect(0,0,cvs.width,cvs.height);
+    for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.rot+=5;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
+    t++;if(t<220)requestAnimationFrame(loop);else cvs.remove();};loop();
+}
+function playSound(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=880;gain.gain.setValueAtTime(0.05,ctx.currentTime);
+    osc.start();gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+    osc.stop(ctx.currentTime+0.45);
+  }catch(e){}
+}
+</script>
+</body>
+</html>

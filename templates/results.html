@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Results | TypeForge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    :root {
+      --accent: #00ffcc;
+      --muted: #9dbfb6;
+      --bg-card: rgba(18,18,18,0.92);
+    }
+    body {
+      background: radial-gradient(circle at top, #0e0e0e, #000);
+      color: #e8f9f4;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .topbar {
+      background: rgba(0,255,204,0.04);
+      padding: 18px;
+      text-align: center;
+      border-bottom: 1px solid rgba(0,255,204,0.06);
+    }
+    .topbar h1 { color: var(--accent); margin: 0; font-size: 1.5rem; }
+    .container { max-width: 920px; margin: 36px auto; padding: 18px; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid rgba(0,255,204,0.06);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .winner-banner {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+    .player-block { text-align:left; }
+    .player-block .label { color: var(--muted); font-weight:700; font-size:0.85rem; }
+    .player-block .value { color:#fff; font-weight:800; font-size:1.25rem; margin-top:6px; }
+    .winner { font-size:1.25rem; color:#ffd36b; font-weight:900; text-align:right; }
+    .stats {
+      display:flex;
+      gap:18px;
+      justify-content:space-around;
+      margin-top: 12px;
+    }
+    .stat {
+      text-align:center;
+      padding:12px 16px;
+      border-radius:10px;
+      background: rgba(0,255,204,0.02);
+      min-width:140px;
+    }
+    .stat h3 { margin:6px 0; color: var(--accent); font-size:1rem; }
+    .stat p { margin:0; font-size:1.6rem; font-weight:700; color:#fff; }
+
+    #chartWrap { margin-top:18px; height:240px; }
+
+    .controls {
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      margin-top:18px;
+    }
+    .btn {
+      padding:10px 16px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .btn.primary { background:var(--accent); color:#000; box-shadow:0 6px 18px rgba(0,255,204,0.08); }
+    .btn.ghost { background:transparent; border:1px solid rgba(0,255,204,0.08); color:var(--accent); }
+
+    footer { text-align:center; margin-top:28px; color:#888; font-size:0.9rem; padding-bottom:22px; }
+
+    /* small confetti canvas */
+    #confettiCanvas { position:fixed; left:0; top:0; pointer-events:none; z-index:9999; width:100%; height:100%; }
+
+    .settings-toggle {
+      position:fixed; top:14px; right:14px; z-index:10000;
+      background:rgba(0,0,0,0.6); padding:8px; border-radius:10px; border:1px solid rgba(0,255,204,0.06);
+      color:#cfeee6; display:flex; gap:8px; align-items:center; font-size:13px;
+    }
+    .settings-toggle input { vertical-align:middle; }
+    @media (max-width:640px) {
+      .stats { flex-direction:column; gap:10px; }
+      .winner-banner { flex-direction:column; align-items:flex-start; gap:8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🏁 Race Results — TypeForge</h1>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="winner-banner">
+        <div class="player-block">
+          <div class="label">Player</div>
+          <div id="playerName" class="value">Guest</div>
+        </div>
+        <div class="player-block">
+          <div class="label">Level</div>
+          <div id="levelName" class="value">—</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:#9be7ff;font-weight:700">Winner</div>
+          <div id="winnerName" class="winner">—</div>
+        </div>
+      </div>
+
+      <div class="stats" aria-live="polite">
+        <div class="stat">
+          <h3>WPM</h3>
+          <p id="statWpm">0</p>
+        </div>
+        <div class="stat">
+          <h3>Accuracy</h3>
+          <p id="statAcc">0%</p>
+        </div>
+        <div class="stat">
+          <h3>Time (s)</h3>
+          <p id="statTime">0</p>
+        </div>
+      </div>
+
+      <div id="chartWrap">
+        <canvas id="resultsChart" width="800" height="240"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="btnBack" class="btn ghost">← Back to Multiplayer</button>
+        <button id="btnRematch" class="btn primary">Start New Race</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-toggle" role="region" aria-label="Settings">
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input id="res_confetti" type="checkbox" checked> Confetti
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;margin-left:8px;">
+      <input id="res_sound" type="checkbox" checked> Sound
+    </label>
+  </div>
+
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <footer>© 2025 TypeForge — Created by <strong>Olanrewaju Abdulmuiz Olamide</strong></footer>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // --- helpers: read query params safely ---
+    function qp(name, def='') {
+      try {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name) || def;
+      } catch(e) { return def; }
+    }
+
+    // read values
+    const player = qp('username', 'Guest');
+    const winner = qp('winner', '');
+    const wpm = Number(qp('wpm', 0));
+    const acc = Number(qp('accuracy', 0));
+    const timeSec = Number(qp('time', 0));
+    const level = qp('level', 'unknown');
+
+    // fill UI
+    document.getElementById('playerName').textContent = player;
+    document.getElementById('winnerName').textContent = winner || '—';
+    document.getElementById('statWpm').textContent = Number.isFinite(wpm) ? wpm : 0;
+    document.getElementById('statAcc').textContent = Number.isFinite(acc) ? (acc + '%') : '0%';
+    document.getElementById('statTime').textContent = Number.isFinite(timeSec) ? timeSec : 0;
+    document.getElementById('levelName').textContent = (level && level !== 'unknown') ? level.charAt(0).toUpperCase() + level.slice(1) : '—';
+
+    // settings persisted
+    const confPref = localStorage.getItem('tf_confetti');
+    const soundPref = localStorage.getItem('tf_sound');
+    const confBox = document.getElementById('res_confetti');
+    const soundBox = document.getElementById('res_sound');
+    if (confPref !== null) confBox.checked = confPref === '1';
+    if (soundPref !== null) soundBox.checked = soundPref === '1';
+    confBox.addEventListener('change', ()=> localStorage.setItem('tf_confetti', confBox.checked ? '1':'0'));
+    soundBox.addEventListener('change', ()=> localStorage.setItem('tf_sound', soundBox.checked ? '1':'0'));
+
+    // --- draw results chart: WPM comparison (show opponent if provided) ---
+    (function drawChart(){
+      const ctx = document.getElementById('resultsChart').getContext('2d');
+      let labels = ['You'];
+      let values = [wpm || 0];
+      let colors = ['#00ffcc'];
+
+      // If opponent wpm passed (op_wpm) show it, else show two simulated opponents for context
+      const opWpm = Number(qp('op_wpm', NaN));
+      if (!Number.isNaN(opWpm)) {
+        labels.push('Opponent');
+        values.push(opWpm);
+        colors.push('#ffd36b');
+      } else if (winner && winner !== player) {
+        // if winner provided and not player, simulate an opponent slightly above/below
+        const simulated = Math.max(5, (wpm || 20) + (Math.random() > 0.5 ? -6 : 6));
+        labels.push(winner);
+        values.push(simulated);
+        colors.push('#ffd36b');
+      } else {
+        // provide two context opponents
+        const a = Math.max(5, (wpm || 30) - Math.round(Math.random()*10));
+        const b = Math.max(3, (wpm || 30) - Math.round(Math.random()*18));
+        labels.push('Opponent A','Opponent B');
+        values.push(a,b);
+        colors.push('#ffd36b','#ff8aa1');
+      }
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'WPM',
+            data: values,
+            backgroundColor: colors
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'WPM' } },
+            x: { ticks: { color: '#ddd' } }
+          }
+        }
+      });
+    })();
+
+    // --- confetti (simple canvas implementation) ---
+    function launchConfettiCanvas() {
+      if (!confBox.checked) return;
+      const canvas = document.getElementById('confettiCanvas');
+      canvas.width = innerWidth; canvas.height = innerHeight;
+      const ctx = canvas.getContext('2d');
+      const parts = [];
+      for (let i=0;i<140;i++){
+        parts.push({
+          x: Math.random()*canvas.width,
+          y: Math.random()*-200,
+          vx: (Math.random()-0.5)*6,
+          vy: Math.random()*6 + 2,
+          w: Math.random()*10 + 6,
+          h: Math.random()*6 + 4,
+          color: `hsl(${Math.random()*360},80%,60%)`,
+          rot: Math.random()*360,
+          drot: (Math.random()-0.5)*10
+        });
+      }
+      let t=0;
+      const raf = () => {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for (const p of parts){
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.15;
+          p.rot += p.drot;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot * Math.PI/180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+          ctx.restore();
+        }
+        t++;
+        if (t < 220) requestAnimationFrame(raf);
+        else ctx.clearRect(0,0,canvas.width,canvas.height);
+      };
+      raf();
+    }
+
+    // --- simple win sound using WebAudio ---
+    function playWinSound() {
+      if (!soundBox.checked) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880;
+        o.connect(g);
+        g.connect(ctx.destination);
+        g.gain.value = 0;
+        g.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.01);
+        o.start();
+        g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        o.stop(ctx.currentTime + 0.36);
+      } catch(e) { /* ignore autoplay policy issues */ }
+    }
+
+    // celebrate if player is winner
+    if (winner && winner === player) {
+      setTimeout(()=>{ launchConfettiCanvas(); playWinSound(); }, 200);
+    } else if (winner) {
+      setTimeout(()=>{ if (soundBox.checked) playWinSound(); }, 150);
+    }
+
+    // --- buttons ---
+    document.getElementById('btnBack').addEventListener('click', ()=> {
+      // go back to multiplayer page for same level
+      const lvl = encodeURIComponent(level || 'beginner');
+      window.location.href = `/multiplayer/${lvl}`;
+    });
+    document.getElementById('btnRematch').addEventListener('click', ()=> {
+      const lvl = encodeURIComponent(level || 'beginner');
+      window.location.href = `/multiplayer/${lvl}`;
+    });
+
+    // Accessibility: announce results
+    try {
+      const live = document.createElement('div');
+      live.setAttribute('aria-live','polite');
+      live.style.position='absolute'; live.style.left='-10000px';
+      live.textContent = `Result: ${player}, WPM ${wpm}, Accuracy ${acc} percent. Winner ${winner || 'TBD'}.`;
+      document.body.appendChild(live);
+    } catch(e){}
+  </script>
+</body>
+</html>

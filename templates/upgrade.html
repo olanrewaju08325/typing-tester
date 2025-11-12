@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upgrade | TypeForge Premium</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { background:#0e0e0e; color:#f1f1f1; font-family:'Segoe UI',sans-serif; margin:0; padding:0; }
+    header { display:flex; justify-content:space-between; align-items:center; background:#141414; padding:12px 25px; }
+    header h1 { color:#00ffcc; font-weight:700; font-size:1.4rem; margin:0; }
+    nav a { color:#ccc; margin-left:16px; text-decoration:none; transition:0.2s; }
+    nav a:hover { color:#00ffcc; }
+
+    .container { max-width:800px; margin:50px auto; text-align:center; }
+    .plan-box { background:#1b1b1b; border:1px solid #222; border-radius:12px; padding:30px; margin-bottom:25px; box-shadow:0 0 15px rgba(0,255,204,0.08); }
+    h2 { color:#00ffcc; }
+    p { color:#ccc; }
+    .btn { background:#00ffcc; color:#000; border:none; border-radius:8px; padding:10px 20px; font-weight:600; cursor:pointer; transition:0.3s; }
+    .btn:hover { background:#00ddb3; }
+    .note { color:#999; font-size:0.9rem; margin-top:8px; }
+
+    #modal, #guide-modal {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;
+    }
+    #modal-content, #guide-content {
+      background:#1b1b1b; padding:30px; border-radius:12px; max-width:400px; text-align:center;
+      box-shadow:0 0 20px rgba(0,255,204,0.2);
+    }
+    .close-btn { background:none; color:#fff; font-size:20px; border:none; float:right; cursor:pointer; }
+    #status-msg { margin-top:10px; color:#00ffcc; font-weight:600; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>TypeForge</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">🏠 Home</a>
+    <a href="{{ url_for('leaderboard') }}">🏆 Leaderboard</a>
+    <a href="{{ url_for('history_view') }}">📜 History</a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h2>Upgrade Your Plan</h2>
+  <p>Choose a plan to unlock more features and dominate the leaderboard!</p>
+
+  <div class="plan-box">
+    <h3>🌟 Premium (₦500)</h3>
+    <ul style="list-style:none; padding:0;">
+      <li>✅ Access Easy–Hard Levels</li>
+      <li>✅ Beginner Multiplayer Access</li>
+      <li>❌ No Expert Mode</li>
+    </ul>
+    <button class="btn" onclick="showModal('Premium', 500)">Upgrade to Premium</button>
+  </div>
+
+  <div class="plan-box">
+    <h3>💎 Premium Plus (₦1000)</h3>
+    <ul style="list-style:none; padding:0;">
+      <li>✅ Unlock All Levels (Easy → Expert)</li>
+      <li>✅ Full Multiplayer Access</li>
+      <li>✅ Leaderboard Priority</li>
+    </ul>
+    <button class="btn" onclick="showModal('Premium Plus', 1000)">Upgrade to Premium Plus</button>
+  </div>
+
+  <button class="btn" style="background:#444;" onclick="showGuide()">📘 View Payments Guide</button>
+</div>
+
+<footer style="text-align:center; margin:40px 0; color:#777;">
+  Created by <strong>Olanrewaju Abdulmuiz Olamide</strong> — Opay: <em>8125815188</em> — © 2025 TypeForge
+</footer>
+
+<!-- Modal -->
+<div id="modal">
+  <div id="modal-content">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h3 id="plan-title"></h3>
+    <p>Send <span id="plan-amount"></span> to:</p>
+    <h2 style="color:#00ffcc;">Opay: 8125815188</h2>
+    <p><strong>Name:</strong> Olanrewaju Halimot Adeola</p>
+    <button class="btn" onclick="copyAccount()">📋 Copy Account Number</button>
+    <div style="margin-top:20px;">
+      <button class="btn" id="submit-proof">✅ Submit Proof</button>
+      <p id="status-msg"></p>
+    </div>
+    <p class="note">After payment, click “Submit Proof” to send your request to admin.</p>
+  </div>
+</div>
+
+<!-- Guide Modal -->
+<div id="guide-modal">
+  <div id="guide-content">
+    <button class="close-btn" onclick="closeGuide()">×</button>
+    <h3>💰 Payment Instructions</h3>
+    <p>To upgrade, send <strong>₦500</strong> for Premium or <strong>₦1000</strong> for Premium Plus.</p>
+    <p><strong>Bank:</strong> Opay<br><strong>Account No:</strong> 8125815188<br><strong>Name:</strong> Olanrewaju Halimot Adeola</p>
+    <p>After payment, click “Submit Proof” in the modal to notify admin.</p>
+  </div>
+</div>
+
+<script>
+  let selectedPlan = null;
+
+  function showModal(plan, amount) {
+    selectedPlan = plan;
+    document.getElementById("plan-title").textContent = `Upgrade to ${plan}`;
+    document.getElementById("plan-amount").textContent = `₦${amount}`;
+    document.getElementById("modal").style.display = "flex";
+  }
+  function closeModal() {
+    document.getElementById("modal").style.display = "none";
+  }
+  function copyAccount() {
+    navigator.clipboard.writeText("8125815188");
+    alert("✅ Account number copied: 8125815188");
+  }
+
+  async function submitProof() {
+    if (!selectedPlan) return alert("Select a plan first!");
+    document.getElementById("status-msg").textContent = "⏳ Submitting...";
+    const plan = selectedPlan === "Premium Plus" ? "premium_plus" : "premium";
+    try {
+      const res = await fetch("/api/upgrade_request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById("status-msg").textContent = "✅ Submitted! Pending admin approval.";
+      } else {
+        document.getElementById("status-msg").textContent = "❌ " + (data.error || "Submission failed.");
+      }
+    } catch (e) {
+      document.getElementById("status-msg").textContent = "⚠️ Network error.";
+    }
+  }
+  document.getElementById("submit-proof").addEventListener("click", submitProof);
+
+  function showGuide() {
+    document.getElementById("guide-modal").style.display = "flex";
+  }
+  function closeGuide() {
+    document.getElementById("guide-modal").style.display = "none";
+  }
+</script>
+
+</body>
+</html>

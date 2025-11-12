@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TypeForge | Boost Your Typing Skills</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { background-color:#0e0e0e; color:#f1f1f1; font-family:'Segoe UI',sans-serif; margin:0; padding:0; }
+    header { display:flex; justify-content:space-between; align-items:center; background:#141414; padding:12px 25px; box-shadow:0 0 10px rgba(0,0,0,0.5); }
+    header h1 { color:#00ffcc; font-weight:700; font-size:1.4rem; margin:0; letter-spacing:1px; }
+    nav a, nav button { color:#ccc; margin-left:16px; text-decoration:none; transition:0.2s; background:none; border:none; font-size:1rem; cursor:pointer; }
+    nav a:hover, nav button:hover { color:#00ffcc; }
+    .main { max-width:900px; margin:40px auto; text-align:center; }
+    .typing-area { border:1px solid #222; border-radius:12px; padding:30px; background:#1b1b1b; box-shadow:0 0 15px rgba(0,255,204,0.08); }
+    .controls-left { margin-bottom:25px; }
+    select,button.btn { margin-left:8px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; }
+    button.btn { background:#00ffcc; color:#000; font-weight:bold; transition:0.3s; }
+    button.btn:hover { background:#00ddb3; }
+    #typing-text { font-size:1.2rem; line-height:1.8rem; text-align:left; margin-bottom:15px; }
+    #typing-input { width:100%; padding:10px; border-radius:8px; font-size:1rem; border:1px solid #333; background:#0e0e0e; color:#fff; }
+    .stats { display:flex; justify-content:space-around; margin-top:25px; font-size:1.1rem; }
+    .progress-bar-container { height:10px; background:#333; border-radius:8px; overflow:hidden; margin-top:20px; }
+    .progress-bar { height:10px; width:0%; background:#00ffcc; transition:width 0.2s; }
+    footer { text-align:center; margin-top:40px; color:#777; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+<header>
+ <h1>TypeForge<span style="color:#fff; font-size:1rem;">.io</span></h1>
+  <nav>
+    {% if current_user %}
+      <span style="color:#00ffcc;">Hi, {{ current_user.username }}</span>
+      <a href="{{ url_for('leaderboard') }}">🏆 Leaderboard</a>
+      {% if current_user %}
+<div class="multiplayer-section">
+  <h2>⚡ Multiplayer Rooms</h2>
+  {% if current_user.plan == 'free' %}
+    <p>You need to upgrade to access multiplayer.</p>
+    <a href="{{ url_for('upgrade') }}" class="btn-upgrade">Upgrade Now</a>
+  {% else %}
+    <ul>
+      {% if 'beginner' in ['beginner'] %}
+        <li><a href="{{ url_for('multiplayer', level='beginner') }}">Beginner Room</a></li>
+      {% endif %}
+      {% if current_user.plan in ['premiumplus'] %}
+        <li><a href="{{ url_for('multiplayer', level='intermediate') }}">Intermediate Room</a></li>
+        <li><a href="{{ url_for('multiplayer', level='advanced') }}">Advanced Room</a></li>
+        <li><a href="{{ url_for('multiplayer', level='expert') }}">Expert Room</a></li>
+      {% endif %}
+    </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+      <a href="{{ url_for('history_view') }}">📜 History</a>
+
+      {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('admin_dashboard') }}">🛠️ Admin</a>
+      {% endif %}
+
+      {% if current_user.plan == 'free' %}
+        <button class="btn locked" onclick="alert('Upgrade to Premium to unlock Multiplayer and Expert mode!')">Enter Multiplayer</button>
+      {% elif current_user.plan == 'premium' %}
+        <a href="{{ url_for('multiplayer', level='beginner') }}" class="btn">Enter Beginner Multiplayer</a>
+      {% elif current_user.plan == 'premium_plus' %}
+        <a href="{{ url_for('multiplayer') }}" class="btn">Enter Multiplayer</a>
+      {% endif %}
+
+      <a href="{{ url_for('upgrade') }}">💎 Upgrade</a>
+
+
+      <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('register') }}">Register</a>
+    {% endif %}
+  </nav>
+</header>
+
+<div class="main">
+  <div class="typing-area">
+    <div class="controls-left">
+      <label for="difficulty-select">Difficulty:</label>
+      <select id="difficulty-select">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
+      <button id="load-btn" class="btn">Load Sentence</button>
+      <button id="submit-btn" class="btn">Submit</button>
+      <button id="retry-btn" class="btn">Retry</button>
+    </div>
+
+<div id="typing-text" class="sentence-display">Click "Load Sentence" to start typing!</div>
+<textarea id="typing-input" placeholder="Start typing here..." disabled></textarea>
+
+
+    <div class="progress-bar-container">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+
+    <div class="stats">
+      <div>⏱ Time Left: <span id="time-left">60s</span></div>
+      <div>⚡ WPM: <span id="wpm">0</span></div>
+      <div>🎯 Accuracy: <span id="accuracy">0</span>%</div>
+    </div>
+  </div>
+</div>
+<!-- Result Summary Modal -->
+<div id="result-modal" class="result-modal hidden">
+  <div class="result-content">
+    <h2 class="result-title">Test Summary</h2>
+    <canvas id="result-graph"></canvas>
+    <div class="stats">
+      <div class="stat">
+        <span class="label">WPM</span>
+        <span id="result-wpm" class="value">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Accuracy</span>
+        <span id="result-accuracy" class="value">0%</span>
+      </div>
+      <div class="stat">
+        <span class="label">Time</span>
+        <span id="result-time" class="value">0s</span>
+      </div>
+    </div>
+    <button id="next-test" class="next-btn">Next Test →</button>
+  </div>
+</div>
+
+<footer>
+  Created by <strong>Olanrewaju Abdulmuiz Olamide</strong> — Opay: <em>8125815188</em> — © 2025 TypeForge
+</footer>
+
+<span id="user-plan" style="display:none;">{{ current_user.plan if current_user else 'free' }}</span>
+<script>
+  window.currentUser = {
+    username: "{{ current_user.username if current_user else 'Guest' }}",
+    plan: "{{ current_user.plan if current_user else 'free' }}"
+  };
+</script>
+
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+<script src="{{ url_for('static', filename='typing.js') }}"></script>
+
+</body>
+</html>
