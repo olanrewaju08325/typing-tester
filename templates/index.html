@@ -83,6 +83,8 @@
           <option value="words">Words</option>
           <option value="quote">Quote</option>
           <option value="zen">Zen</option>
+          <option value="practice">Practice</option>
+          <option value="challenge">Challenge</option>
           <option value="custom">Custom</option>
         </select>
         <select id="test-length">
@@ -139,6 +141,12 @@
       <div class="setting-group">
         <label>Custom Text: 
           <textarea id="custom-text" placeholder="Enter your custom text here..." rows="3"></textarea>
+        </label>
+      </div>
+      <div class="setting-group">
+        <label>Custom Word List: 
+          <input type="file" id="word-list-file" accept=".txt">
+          <small>Upload a .txt file with words separated by spaces or newlines</small>
         </label>
       </div>
       <div class="setting-group">
@@ -202,6 +210,12 @@
         <span class="label">Time</span>
         <span id="result-time" class="value">0s</span>
       </div>
+    </div>
+    <div class="advanced-stats">
+      <h3>Keyboard Heatmap</h3>
+      <div id="keyboard-heatmap" class="heatmap-container"></div>
+      <h3>Error Analysis</h3>
+      <div id="error-analysis" class="error-list"></div>
     </div>
     <button id="next-test" class="next-btn">Next Test →</button>
   </div>

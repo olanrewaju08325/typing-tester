@@ -592,6 +592,68 @@ a:focus, button:focus, input:focus, select:focus { outline: 2px solid rgba(0,255
 .next-btn:hover {
   background: #00ccaa;
 }
+
+.advanced-stats {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.advanced-stats h3 {
+  color: #00ffcc;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.heatmap-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 20px;
+  max-width: 400px;
+}
+
+.key-heat {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #333;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.key-heat.hot {
+  background: #ff6b6b;
+}
+
+.key-heat.warm {
+  background: #ffa500;
+}
+
+.key-heat.medium {
+  background: #ffff00;
+  color: #000;
+}
+
+.error-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.error-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #333;
+}
+
+.error-item:last-child {
+  border-bottom: none;
+}
+
 /* ================= TypeForge Monkeytype-style additions ================= */
 
 /* typing paragraph & chars */

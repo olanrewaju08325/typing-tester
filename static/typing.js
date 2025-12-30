@@ -18,7 +18,7 @@
   function $id(id) { return $('#' + id); }
 
   // config / state
-  const testModes = { time: 'Time', words: 'Words', quote: 'Quote', zen: 'Zen' };
+  const testModes = { time: 'Time', words: 'Words', quote: 'Quote', zen: 'Zen', practice: 'Practice', challenge: 'Challenge' };
   let currentMode = 'time';
   let currentLength = 30;
   let currentLanguage = 'english';
@@ -41,6 +41,9 @@
   let charIndex = 0;
   let errors = 0;
   let totalChars = 0;
+  let keyHeatmap = {}; // track key press counts for heatmap
+  let errorAnalysis = {}; // track common typing errors
+  let customWordList = []; // user uploaded word list
 
   // DOM elements
   const $sentenceBox = $id('typing-text');
@@ -127,18 +130,30 @@
     caretStyle = $caretStyle.val();
 
     try {
-      const params = new URLSearchParams({
-        mode: currentMode,
-        length: currentLength,
-        language: currentLanguage,
-        punctuation: punctuationEnabled,
-        numbers: numbersEnabled,
-        custom_text: currentMode === 'custom' ? $id('custom-text').val() : ''
-      });
-      const res = await fetch(`/api/sentences?${params}`);
-      if (!res.ok) throw new Error('fetch failed');
-      const data = await res.json();
-      const sentence = data.text || data.sentence || 'The quick brown fox jumps over the lazy dog.';
+      let sentence;
+      if (customWordList.length > 0 && currentMode !== 'custom') {
+        // Use custom word list
+        const wordCount = currentMode === 'words' ? parseInt(currentLength) : 30;
+        const selectedWords = [];
+        for (let i = 0; i < wordCount; i++) {
+          selectedWords.push(customWordList[Math.floor(Math.random() * customWordList.length)]);
+        }
+        sentence = selectedWords.join(' ');
+      } else {
+        // Use API
+        const params = new URLSearchParams({
+          mode: currentMode,
+          length: currentLength,
+          language: currentLanguage,
+          punctuation: punctuationEnabled,
+          numbers: numbersEnabled,
+          custom_text: currentMode === 'custom' ? $id('custom-text').val() : ''
+        });
+        const res = await fetch(`/api/sentences?${params}`);
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        sentence = data.text || data.sentence || 'The quick brown fox jumps over the lazy dog.';
+      }
 
       // avoid immediate duplicates
       if (recentSentences.includes(sentence) && recentSentences.length < 20) {
@@ -198,6 +213,8 @@
     charIndex = 0;
     errors = 0;
     totalChars = currentSentence.length;
+    keyHeatmap = {}; // reset heatmap
+    errorAnalysis = {}; // reset error analysis
 
     $inputBox.prop('disabled', false).focus();
     $submitBtn.removeClass('hidden');
@@ -247,6 +264,28 @@
       // Zen mode - no timer
       $timeLeft.text('∞');
       $progressBar.css('width', '100%');
+    } else if (currentMode === 'practice') {
+      // Practice mode - focus on accuracy, slower pace
+      $timeLeft.text('Practice');
+      $progressBar.css('width', '100%');
+    } else if (currentMode === 'challenge') {
+      // Challenge mode - timed with WPM goal
+      timeLeft = parseInt(currentLength) || 60;
+      $timeLeft.text(`${timeLeft}s (Goal: ${Math.max(40, parseInt(currentLength) * 2)} WPM)`);
+      $progressBar.css('width', '100%');
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        $timeLeft.text(`${timeLeft}s (Goal: ${Math.max(40, parseInt(currentLength) * 2)} WPM)`);
+        const pct = ((timeLeft / (parseInt(currentLength) || 60)) * 100).toFixed(2);
+        $progressBar.css('width', pct + '%');
+
+        if (timeLeft <= 0) {
+          clearAllIntervals();
+          finishTyping();
+        }
+      }, 1000);
     }
 
     // sample WPM every second
@@ -320,6 +359,9 @@
         $ch.css('color', '#ff6b6b'); // red
         if (blindMode) $ch.css('text-shadow', 'none');
         currentErrors++;
+        // Track error analysis
+        const errorKey = expected + '->' + typedChar;
+        errorAnalysis[errorKey] = (errorAnalysis[errorKey] || 0) + 1;
         playSound('error');
         if (stopOnError) {
           setTimeout(() => finishTyping(), 100);
@@ -432,6 +474,50 @@
     return out;
   }
 
+  // Render keyboard heatmap
+  function renderKeyboardHeatmap() {
+    const container = $id('keyboard-heatmap');
+    container.empty();
+
+    const keys = 'qwertyuiopasdfghjklzxcvbnm ';
+    const maxCount = Math.max(...Object.values(keyHeatmap)) || 1;
+
+    for (let key of keys) {
+      const count = keyHeatmap[key] || 0;
+      const intensity = count / maxCount;
+      let heatClass = '';
+      if (intensity > 0.7) heatClass = 'hot';
+      else if (intensity > 0.4) heatClass = 'warm';
+      else if (intensity > 0) heatClass = 'medium';
+
+      const keyEl = $('<div>').addClass('key-heat').addClass(heatClass).text(key.toUpperCase());
+      container.append(keyEl);
+    }
+  }
+
+  // Render error analysis
+  function renderErrorAnalysis() {
+    const container = $id('error-analysis');
+    container.empty();
+
+    const sortedErrors = Object.entries(errorAnalysis)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10); // top 10 errors
+
+    for (let [error, count] of sortedErrors) {
+      const [expected, typed] = error.split('->');
+      const item = $('<div>').addClass('error-item').html(`
+        <span>${expected} → ${typed}</span>
+        <span>${count}</span>
+      `);
+      container.append(item);
+    }
+
+    if (sortedErrors.length === 0) {
+      container.html('<p>No errors recorded</p>');
+    }
+  }
+
   // Show result modal (Monkeytype-like)
   function showResultModal(wpm, rawWpm, accuracy, consistency, timeSpent, characters, samples) {
     $('#result-modal').removeClass('hidden');
@@ -443,6 +529,10 @@
     $id('result-raw-wpm').text(rawWpm);
     $id('result-characters').text(characters);
     $id('result-time').text(timeSpent + 's');
+
+    // Render advanced stats
+    renderKeyboardHeatmap();
+    renderErrorAnalysis();
 
     // Chart rendering
     const ctx = document.getElementById('result-graph');
@@ -640,6 +730,29 @@
     updateHistoryUI();
     updateLeaderboardUI();
     setInterval(() => { updateHistoryUI(); updateLeaderboardUI(); }, 10000);
+
+    // Add keydown listener for heatmap tracking
+    $(document).on('keydown', function(e) {
+      if (!started || finished) return;
+      const key = e.key.toLowerCase();
+      if (key.length === 1 || key === ' ') { // only track printable chars and space
+        keyHeatmap[key] = (keyHeatmap[key] || 0) + 1;
+      }
+    });
+
+    // Handle custom word list upload
+    $id('word-list-file').on('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const text = e.target.result;
+          customWordList = text.split(/\s+/).filter(word => word.length > 0);
+          console.log('Loaded custom word list with', customWordList.length, 'words');
+        };
+        reader.readAsText(file);
+      }
+    });
   });
 
   // Reset UI
