@@ -1,0 +1,10 @@
+Flask>=2.0.0
+Flask-Bcrypt
+Flask-WTF
+Flask-Login
+Flask-Limiter
+Flask-SocketIO
+python-dotenv
+cryptography
+requests
+WTForms

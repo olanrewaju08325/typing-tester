@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — TypeForge{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Admin Dashboard</h2>
+    <div>
+      <button class="btn" onclick="openPaymentsGuide()">💳 View Payments Guide</button>
+      <a class="btn" href="{{ url_for('index') }}">Back to Test</a>
+    </div>
+  </header>
+
+  <div style="height:12px;"></div>
+
+  <!-- Registered Users -->
+  <div class="card">
+    <h3>Registered Users</h3>
+    <table class="admin-table">
+      <thead>
+        <tr><th>User</th><th>Role</th><th>Plan</th></tr>
+      </thead>
+      <tbody>
+        {% for uname, u in users.items() %}
+        <tr>
+          <td>{{ uname }}</td>
+          <td>{{ u.role if u.role else 'user' }}</td>
+          <td>{{ u.plan if u.plan else 'free' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="height:12px;"></div>
+
+  <!-- History Snapshot -->
+  <div class="card">
+    <h3>Site History Snapshot</h3>
+    <p>Recent entries per user (most recent first)</p>
+    <div style="max-height:280px; overflow:auto;">
+      {% for user, runs in history.items() %}
+      <div style="margin-bottom:12px;">
+        <strong>{{ user }}</strong>
+        <ul style="margin:6px 0 0 18px;">
+          {% for r in runs|reverse %}
+            {% if loop.index <= 6 %}
+              <li>{{ r.wpm }} WPM — {{ r.time }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="height:12px;"></div>
+
+  <!-- Pending Upgrades -->
+  <div class="card">
+    <h3>Pending Upgrades</h3>
+    <table class="admin-table" id="pending-upgrades-table">
+      <thead>
+        <tr><th>User</th><th>Requested Plan</th><th>Action</th></tr>
+      </thead>
+      <tbody id="pending-users">
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // ✅ Fetch pending upgrades
+    async function loadPendingUsers() {
+      try {
+        const res = await fetch("/api/admin/pending_upgrades");
+        const users = await res.json();
+        const tbody = document.getElementById("pending-users");
+
+        if (!users || !users.length) {
+          tbody.innerHTML = '<tr><td colspan="3">No pending upgrades</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td>${u.username}</td>
+            <td>${u.pending}</td>
+            <td><button class="btn" onclick="markPaid('${u.username}', '${u.pending}')">Mark as Paid</button></td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error("Error loading pending upgrades:", err);
+        document.getElementById("pending-users").innerHTML =
+          '<tr><td colspan="3">⚠️ Failed to load pending upgrades.</td></tr>';
+      }
+    }
+
+    // ✅ Mark user as paid and refresh
+    async function markPaid(username, plan) {
+      if (!confirm(`Confirm marking ${username} as paid for ${plan}?`)) return;
+
+      try {
+        const res = await fetch("/api/admin/mark_paid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username })
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          alert(`✅ ${username} upgraded successfully to ${data.new_plan || 'Premium Plus'}!`);
+          loadPendingUsers();
+        } else {
+          alert("❌ " + (data.error || "Failed to update user."));
+        }
+      } catch (err) {
+        console.error("Error marking paid:", err);
+        alert("⚠️ Network error while marking as paid.");
+      }
+    }
+
+    loadPendingUsers();
+  </script>
+
+  <div style="height:12px;"></div>
+
+  <!-- Add New User -->
+  <div class="card">
+    <h3>Add User (Admin)</h3>
+    <form method="post" action="{{ url_for('register') }}">
+      <label class="field">Username <input name="username" required></label>
+      <label class="field">Password <input name="password" required></label>
+      <label class="field">Plan
+        <select name="plan">
+          <option value="free">Free</option>
+          <option value="premium">Premium</option>
+          <option value="premium_plus">Premium Plus</option>
+        </select>
+      </label>
+      <div style="margin-top:8px;">
+        <button class="btn" type="submit">Create User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 💳 Payment Guide Modal -->
+<div id="payment-guide-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:9999;">
+  <div style="background:#1b1b1b; padding:30px; border-radius:12px; max-width:400px; text-align:center; box-shadow:0 0 25px rgba(0,255,204,0.2);">
+    <button style="float:right; background:none; border:none; color:#fff; font-size:22px; cursor:pointer;" onclick="closePaymentsGuide()">×</button>
+    <h3 style="color:#00ffcc;">💰 TypeForge Payment Guide</h3>
+    <p>For <strong>Premium (₦500)</strong> or <strong>Premium Plus (₦1000)</strong> upgrade:</p>
+    <h2 style="color:#00ffcc;">Opay: 8125815188</h2>
+    <p><strong>Name:</strong> Olanrewaju Halimot Adeola</p>
+    <button class="btn" onclick="navigator.clipboard.writeText('8125815188'); alert('✅ Copied account number!')">Copy Account</button>
+  </div>
+</div>
+
+<script>
+function openPaymentsGuide() {
+  document.getElementById("payment-guide-modal").style.display = "flex";
+}
+function closePaymentsGuide() {
+  document.getElementById("payment-guide-modal").style.display = "none";
+}
+</script>
+
+{% endblock %}

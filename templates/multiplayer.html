@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multiplayer | TypeForge</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  
+  <style>
+    body {
+      background: #0e0e0e;
+      color: #f1f1f1;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #141414;
+      padding: 12px 25px;
+      border-bottom: 1px solid #222;
+    }
+    header h1 {
+      color: #00ffcc;
+      font-weight: 700;
+      font-size: 1.3rem;
+      margin: 0;
+    }
+    nav a {
+      color: #ccc;
+      margin-left: 16px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: 0.2s;
+    }
+    nav a:hover { color: #00ffcc; }
+
+    .container {
+      max-width: 900px;
+      margin: 50px auto;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #countdown {
+      font-size: 80px;
+      color: #ffba40;
+      font-weight: 900;
+      margin: 40px 0;
+      animation: pop 1s ease-in-out;
+    }
+
+    @keyframes pop {
+      0% { opacity: 0; transform: scale(0.5); }
+      50% { opacity: 1; transform: scale(1.3); }
+      100% { opacity: 0; transform: scale(0.8); }
+    }
+
+    #sentence {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 25px;
+      color: #ddd;
+      font-size: 1.2rem;
+      margin: 20px 0;
+      box-shadow: 0 0 10px rgba(0,255,204,0.15);
+    }
+
+    #input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      outline: none;
+      margin-bottom: 20px;
+      background: #222;
+      color: #f1f1f1;
+      transition: 0.3s;
+    }
+
+    #input:disabled {
+      background: #111;
+      color: #555;
+      cursor: not-allowed;
+    }
+
+    #progress-container {
+      margin-top: 25px;
+    }
+
+    .player-progress {
+      background: #1b1b1b;
+      border-radius: 8px;
+      margin: 12px 0;
+      padding: 10px;
+      text-align: left;
+      position: relative;
+      height: 36px;
+      overflow: hidden;
+      box-shadow: 0 0 5px rgba(0,255,204,0.1);
+    }
+
+    .player-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #00ffcc, #0077ff);
+      transition: width 0.3s ease-out;
+    }
+
+    .player-name {
+      position: relative;
+      z-index: 2;
+      padding-left: 12px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    footer {
+      margin-top: 40px;
+      color: #777;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+  </style>
+  </head>
+<body>
+<header>
+  <h1>⚡ TypeForge Multiplayer</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">🏠 Home</a>
+    <a href="{{ url_for('leaderboard') }}">🏆 Leaderboard</a>
+    <a href="{{ url_for('history_view') }}">📜 History</a>
+    <a href="{{ url_for('logout') }}">🚪 Logout</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h2>Multiplayer Race (Level: {{ level|capitalize }})</h2>
+  <p>Welcome, <strong>{{ current_user.username }}</strong> — Plan: <strong>{{ current_user.plan|capitalize }}</strong></p>
+
+<body data-level="{{ level }}">
+  <div id="sentence" class="sentence-display">Waiting for sentence...</div>
+  <textarea id="input" placeholder="Start typing here..." disabled></textarea>
+  <div id="countdown" class="countdown"></div>
+  <div id="progress-container"></div>
+
+  <script src="{{ url_for('static', filename='js/multiplayer.js') }}"></script>
+</body>
+
+<footer>
+  Created by <strong>Olanrewaju Abdulmuiz Olamide</strong> — Opay: 8125815188 — © 2025 TypeForge
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+  const socket = io.connect(window.location.origin);
+  const sentenceEl = document.getElementById("sentence");
+  const inputEl = document.getElementById("input");
+  const countdownEl = document.getElementById("countdown");
+  const progressContainer = document.getElementById("progress-container");
+
+  const username = "{{ current_user.username }}";
+  const level = "{{ level }}";
+  let currentSentence = "";
+  let players = {};
+  let started = false;
+
+  // --- Join level-specific room ---
+  socket.emit("join_room", { room: level, username: username });
+
+  // --- Server sends new sentence ---
+  socket.on("new_sentence", (data) => {
+    if (data.room !== level) return;
+    currentSentence = data.sentence;
+    sentenceEl.textContent = currentSentence;
+    showCountdown(() => startTyping());
+  });
+
+  // --- Countdown ---
+  function showCountdown(callback) {
+    const sequence = ["5", "4", "3", "2", "1", "GO!"];
+    let i = 0;
+    countdownEl.style.display = "block";
+
+    const next = () => {
+      countdownEl.textContent = sequence[i];
+      countdownEl.style.animation = "pop 1s ease-in-out";
+      i++;
+      if (i < sequence.length) setTimeout(next, 900);
+      else setTimeout(() => {
+        countdownEl.style.display = "none";
+        callback();
+      }, 900);
+    };
+    next();
+  }
+
+  function startTyping() {
+    inputEl.disabled = false;
+    inputEl.focus();
+    started = true;
+  }
+
+  // --- Progress update ---
+  inputEl.addEventListener("input", () => {
+    if (!started) return;
+    const progress = (inputEl.value.length / currentSentence.length) * 100;
+    socket.emit("progress_update", { room: level, username: username, progress: progress });
+
+    if (inputEl.value === currentSentence) {
+      socket.emit("race_finished", { room: level, username: username });
+      inputEl.disabled = true;
+    }
+  });
+
+  // --- Update player progress ---
+  socket.on("update_progress", (data) => {
+    if (data.room !== level) return;
+    players = data.players;
+    renderProgress();
+  });
+
+  function renderProgress() {
+    progressContainer.innerHTML = "";
+    Object.keys(players).forEach(name => {
+      const bar = document.createElement("div");
+      bar.className = "player-progress";
+      const fill = document.createElement("div");
+      fill.className = "player-fill";
+      fill.style.width = players[name] + "%";
+      const label = document.createElement("span");
+      label.className = "player-name";
+      label.textContent = `${name} — ${Math.round(players[name])}%`;
+      bar.appendChild(fill);
+      bar.appendChild(label);
+      progressContainer.appendChild(bar);
+    });
+  }
+
+  // --- Announce winner ---
+  socket.on("race_finished", (data) => {
+    if (data.room !== level) return;
+    alert(`🏁 Race finished! Winner: ${data.winner}`);
+    inputEl.disabled = true;
+  });
+
+  socket.on("disconnect", () => {
+    inputEl.disabled = true;
+    sentenceEl.textContent = "⚠️ Connection lost. Please reload.";
+  });
+</script>
+</body>
+</html>

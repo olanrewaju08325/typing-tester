@@ -1,0 +1,15 @@
+{
+  "abdulmuiz": {
+    "password": "muizudeen",
+    "role": "admin",
+    "plan": "premium"
+  },
+  "testuser": {
+    "password": "muiz",
+    "role": "user",
+    "plan": "free",
+    "pending_upgrade_to": "premium",
+    "pending_amount": 2000,
+    "pending_status": "pending"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "receiving_account": {
+    "bank_name": "OPay",
+    "account_name": "YOUR NAME",
+    "account_number": "YOUR ACCOUNT"
+  }
+}

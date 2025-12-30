@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile — {{ current_user.username }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background-color:#0e0e0e; color:#f1f1f1; font-family:'Segoe UI',sans-serif; margin:0; padding:0; }
+    header { display:flex; justify-content:space-between; align-items:center; background:#141414; padding:12px 25px; box-shadow:0 0 10px rgba(0,0,0,0.5); }
+    header h1 { color:#00ffcc; font-weight:700; font-size:1.4rem; margin:0; letter-spacing:1px; }
+    nav a { color:#ccc; margin-left:16px; text-decoration:none; transition:0.2s; }
+    nav a:hover { color:#00ffcc; }
+    .main { max-width:1200px; margin:40px auto; padding:0 20px; }
+    .profile-header { text-align:center; margin-bottom:40px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:40px; }
+    .stat-card { background:#1b1b1b; padding:20px; border-radius:12px; text-align:center; box-shadow:0 0 15px rgba(0,255,204,0.08); }
+    .stat-card h3 { color:#00ffcc; margin:0 0 10px 0; }
+    .stat-card .value { font-size:2rem; font-weight:bold; }
+    .achievements { margin-bottom:40px; }
+    .achievement { background:#222; padding:10px; border-radius:8px; margin:5px 0; }
+    .recent-runs { background:#1b1b1b; padding:20px; border-radius:12px; }
+    .run { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #333; }
+    .run:last-child { border-bottom:none; }
+  </style>
+</head>
+<body>
+<header>
+ <h1>TypeForge<span style="color:#fff; font-size:1rem;">.io</span></h1>
+  <nav>
+    <a href="{{ url_for('index') }}">Home</a>
+    <a href="{{ url_for('leaderboard') }}">Leaderboard</a>
+    <a href="{{ url_for('history_view') }}">History</a>
+    {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+    {% endif %}
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </nav>
+</header>
+
+<div class="main">
+  <div class="profile-header">
+    <h2>{{ current_user.username }}'s Profile</h2>
+    <p>Level: {{ current_user.level }} | Plan: {{ current_user.plan }}</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>Total Tests</h3>
+      <div class="value">{{ stats.total_tests }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Average WPM</h3>
+      <div class="value">{{ stats.avg_wpm }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Best WPM</h3>
+      <div class="value">{{ stats.best_wpm }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Average Accuracy</h3>
+      <div class="value">{{ stats.avg_accuracy }}%</div>
+    </div>
+    <div class="stat-card">
+      <h3>Best Accuracy</h3>
+      <div class="value">{{ stats.best_accuracy }}%</div>
+    </div>
+    <div class="stat-card">
+      <h3>Typing Streak</h3>
+      <div class="value">{{ streak }} days</div>
+    </div>
+    <div class="stat-card">
+      <h3>Total Characters</h3>
+      <div class="value">{{ stats.total_chars }}</div>
+    </div>
+    <div class="stat-card">
+      <h3>Total Time</h3>
+      <div class="value">{{ stats.total_time }}s</div>
+    </div>
+  </div>
+
+  <div class="achievements">
+    <h3>Achievements</h3>
+    {% for achievement in achievements %}
+      <div class="achievement">🏆 {{ achievement }}</div>
+    {% endfor %}
+  </div>
+
+  <div class="recent-runs">
+    <h3>Performance Over Time</h3>
+    <canvas id="performance-chart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="recent-runs">
+    <h3>Recent Runs</h3>
+    {% for run in runs %}
+      <div class="run">
+        <span>{{ run.date }}</span>
+        <span>WPM: {{ run.wpm }}</span>
+        <span>Accuracy: {{ run.accuracy }}%</span>
+        <span>Time: {{ run.time }}s</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  const runs = {{ runs|tojson }};
+  const ctx = document.getElementById('performance-chart').getContext('2d');
+  const labels = runs.map((_, i) => `Test ${i+1}`);
+  const wpmData = runs.map(r => r.wpm);
+  const accData = runs.map(r => r.accuracy);
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'WPM',
+        data: wpmData,
+        borderColor: '#00ffcc',
+        backgroundColor: 'rgba(0, 255, 204, 0.1)',
+        yAxisID: 'y'
+      }, {
+        label: 'Accuracy',
+        data: accData,
+        borderColor: '#ff6b6b',
+        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+        yAxisID: 'y1'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { type: 'linear', position: 'left', title: { text: 'WPM', display: true } },
+        y1: { type: 'linear', position: 'right', title: { text: 'Accuracy %', display: true }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+</script>
+
+<span id="user-plan" style="display:none;">{{ current_user.plan if current_user else 'free' }}</span>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\user\Desktop\original typing tester - Copy\templates\profile.html

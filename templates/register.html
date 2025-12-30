@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Register — Typing Tester{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card auth-card" style="max-width:480px; margin:28px auto;">
+    <h2 style="margin:0 0 12px 0;">Create account</h2>
+
+    <form method="post" action="{{ url_for('register') }}">
+      <label class="field">Username
+        <input type="text" name="username" required autofocus>
+      </label>
+
+      <label class="field">Password
+        <input type="password" name="password" required>
+      </label>
+
+      <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+        <button class="btn" type="submit">Register</button>
+        <a class="pill" href="{{ url_for('login') }}">Back to login</a>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-top:12px;">
+            {% for cat, msg in messages %}
+              <div class="flash {{ cat }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </form>
+  </div>
+</div>
+{% endblock %}

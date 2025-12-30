@@ -1,0 +1,30 @@
+{
+  "abdulmuiz": [
+    {
+      "difficulty": "medium",
+      "wpm": 73,
+      "accuracy": 96,
+      "time": 58,
+      "timestamp": "2025-11-11 21:30:00"
+    }
+  ],
+  "testuser": [
+    {
+      "difficulty": "easy",
+      "wpm": 14.0,
+      "accuracy": 75.0,
+      "time": 17,
+      "timestamp": "2025-11-11 11:07:04"
+    },
+    {
+      "wpm": 14,
+      "accuracy": 75.0,
+      "time": 1762859224
+    },
+    {
+      "wpm": 0,
+      "accuracy": 0.0,
+      "time": 1762859247
+    }
+  ]
+}
