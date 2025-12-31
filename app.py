@@ -378,42 +378,42 @@ def get_achievements(runs):
     modes_used = set(r.get("mode", "time") for r in runs)
     
     # Basic achievements
-    if total_tests >= 1: achievements.append("🚀 First Test")
-    if total_tests >= 10: achievements.append("🔥 10 Tests")
-    if total_tests >= 50: achievements.append("💯 50 Tests")
-    if total_tests >= 100: achievements.append("🏆 Century Club")
+    if total_tests >= 1: achievements.append("[START] First Test")
+    if total_tests >= 10: achievements.append("[FIRE] 10 Tests")
+    if total_tests >= 50: achievements.append("[100] 50 Tests")
+    if total_tests >= 100: achievements.append("[TROPHY] Century Club")
     
     # Speed achievements
-    if best_wpm >= 40: achievements.append("⚡ Speed Starter")
-    if best_wpm >= 60: achievements.append("💨 Fast Fingers")
-    if best_wpm >= 80: achievements.append("🌀 Typing Ninja")
-    if best_wpm >= 100: achievements.append("🚀 Speed Demon")
-    if best_wpm >= 120: achievements.append("👑 Typing Legend")
+    if best_wpm >= 40: achievements.append("[LIGHTNING] Speed Starter")
+    if best_wpm >= 60: achievements.append("[WIND] Fast Fingers")
+    if best_wpm >= 80: achievements.append("[SWIRL] Typing Ninja")
+    if best_wpm >= 100: achievements.append("[ROCKET] Speed Demon")
+    if best_wpm >= 120: achievements.append("[CROWN] Typing Legend")
     
     # Accuracy achievements
-    if best_accuracy >= 95: achievements.append("🎯 Accuracy Master")
-    if best_accuracy >= 98: achievements.append("🔍 Perfectionist")
-    if best_accuracy == 100: achievements.append("💎 Flawless")
+    if best_accuracy >= 95: achievements.append("[TARGET] Accuracy Master")
+    if best_accuracy >= 98: achievements.append("[MAGNIFY] Perfectionist")
+    if best_accuracy == 100: achievements.append("[DIAMOND] Flawless")
     
     # Volume achievements
-    if total_chars >= 10000: achievements.append("📚 Word Warrior")
-    if total_chars >= 50000: achievements.append("📖 Book Reader")
-    if total_chars >= 100000: achievements.append("🎓 Scholar")
+    if total_chars >= 10000: achievements.append("[BOOK] Word Warrior")
+    if total_chars >= 50000: achievements.append("[OPEN_BOOK] Book Reader")
+    if total_chars >= 100000: achievements.append("[GRADUATE] Scholar")
     
     # Mode diversity
-    if len(modes_used) >= 3: achievements.append("🎮 Mode Explorer")
-    if len(modes_used) >= 5: achievements.append("🎪 Mode Master")
-    if "puzzle" in modes_used: achievements.append("🧩 Puzzle Solver")
-    if "code" in modes_used: achievements.append("💻 Code Warrior")
-    if "quote" in modes_used: achievements.append("💭 Quote Master")
+    if len(modes_used) >= 3: achievements.append("[GAME] Mode Explorer")
+    if len(modes_used) >= 5: achievements.append("[CIRCUS] Mode Master")
+    if "puzzle" in modes_used: achievements.append("[PUZZLE] Puzzle Solver")
+    if "code" in modes_used: achievements.append("[CODE] Code Warrior")
+    if "quote" in modes_used: achievements.append("[QUOTE] Quote Master")
     
     # Consistency achievements
-    if avg_wpm >= 50 and total_tests >= 20: achievements.append("📈 Consistent")
-    if avg_wpm >= 70 and total_tests >= 20: achievements.append("📊 Reliable")
+    if avg_wpm >= 50 and total_tests >= 20: achievements.append("[CHART] Consistent")
+    if avg_wpm >= 70 and total_tests >= 20: achievements.append("[GRAPH] Reliable")
     
     # Special achievements
     high_score_games = sum(1 for r in runs if r.get("wpm", 0) >= 80)
-    if high_score_games >= 10: achievements.append("🌟 High Scorer")
+    if high_score_games >= 10: achievements.append("[STAR] High Scorer")
     
     return achievements
 

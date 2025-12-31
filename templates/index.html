@@ -48,7 +48,7 @@
   <nav>
     {% if current_user %}
       <span style="color:#00ffcc;">Hi, {{ current_user.username }}</span>
-      <a href="{{ url_for('leaderboard') }}">🏆 Leaderboard</a>
+      <a href="{{ url_for('leaderboard') }}">[TROPHY] Leaderboard</a>
       <a href="{{ url_for('profile') }}">👤 Profile</a>
       <a href="{{ url_for('history_view') }}">📜 History</a>
 
@@ -61,7 +61,7 @@
       {% elif current_user.plan == 'premium' %}
         <a href="{{ url_for('multiplayer', level='beginner') }}" class="btn">Enter Beginner Multiplayer</a>
       {% elif current_user.plan == 'premium_plus' %}
-        <a href="{{ url_for('multiplayer') }}" class="btn">Enter Multiplayer</a>        <a href="{{ url_for('tournament', level='beginner') }}" class="btn">🏆 Tournament</a>      {% endif %}
+        <a href="{{ url_for('multiplayer') }}" class="btn">Enter Multiplayer</a>        <a href="{{ url_for('tournament', level='beginner') }}" class="btn">[TROPHY] Tournament</a>      {% endif %}
 
       <a href="{{ url_for('upgrade') }}">💎 Upgrade</a>
       <a href="{{ url_for('logout') }}">🚪 Logout</a>
@@ -174,7 +174,7 @@
 
     <div class="stats">
       <div>⏱ Time Left: <span id="time-left">30s</span></div>
-      <div>⚡ WPM: <span id="wpm">0</span></div>
+      <div>[LIGHTNING] WPM: <span id="wpm">0</span></div>
       <div>🎯 Accuracy: <span id="accuracy">0</span>%</div>
       <div>📊 Consistency: <span id="consistency">0</span>%</div>
       <div>🔤 Raw WPM: <span id="raw-wpm">0</span></div>

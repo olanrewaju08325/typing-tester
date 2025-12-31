@@ -84,7 +84,7 @@
   <div class="achievements">
     <h3>Achievements</h3>
     {% for achievement in achievements %}
-      <div class="achievement">🏆 {{ achievement }}</div>
+      <div class="achievement">[TROPHY] {{ achievement }}</div>
     {% endfor %}
   </div>
 
@@ -106,7 +106,7 @@
   </div>
 
   <div class="recent-runs global-activity">
-    <h3>🌍 Global Activity</h3>
+    <h3>[GLOBE] Global Activity</h3>
     {% for activity in global_activity %}
       <div class="run">
         <span><strong>{{ activity.username }}</strong></span>
