@@ -31,6 +31,8 @@ app.secret_key = os.environ.get("SECRET_KEY", "typeforge_dev_secret_key")
 # allow CORS for socket clients during development
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 players = {}  # sid -> {name, username, level, wpm, progress}
+tournaments = {}  # tournament_id -> {players: [], status: 'waiting|active|finished', rounds: [], current_round: 0}
+active_tournaments = {}  # room -> tournament data
 
 # -----------------------------------------------------
 # Helpers: JSON utils
@@ -318,6 +320,22 @@ def profile():
     streak = calculate_streak(user_runs)
     achievements = get_achievements(user_runs)
 
+    # Global activity - recent tests from all users
+    global_activity = []
+    for username, user_runs in history.items():
+        for run in user_runs[-5:]:  # last 5 runs per user
+            global_activity.append({
+                "username": username,
+                "wpm": run.get("wpm", 0),
+                "accuracy": run.get("accuracy", 0),
+                "date": run.get("date", ""),
+                "mode": run.get("mode", "time")
+            })
+    
+    # Sort by date (most recent first) and take top 20
+    global_activity.sort(key=lambda x: x["date"], reverse=True)
+    global_activity = global_activity[:20]
+
     return render_template("profile.html", 
                          user=user, 
                          runs=user_runs[-20:],  # last 20 runs
@@ -331,7 +349,8 @@ def profile():
                              "total_chars": total_chars
                          },
                          streak=streak,
-                         achievements=achievements)
+                         achievements=achievements,
+                         global_activity=global_activity)
 
 def calculate_streak(runs):
     if not runs:
@@ -353,16 +372,48 @@ def get_achievements(runs):
     achievements = []
     total_tests = len(runs)
     best_wpm = max((r.get("wpm", 0) for r in runs), default=0)
+    avg_wpm = sum(r.get("wpm", 0) for r in runs) / max(total_tests, 1)
     total_chars = sum(r.get("characters", 0) for r in runs)
+    best_accuracy = max((r.get("accuracy", 0) for r in runs), default=0)
+    modes_used = set(r.get("mode", "time") for r in runs)
     
-    if total_tests >= 1: achievements.append("First Test")
-    if total_tests >= 10: achievements.append("10 Tests")
-    if total_tests >= 50: achievements.append("50 Tests")
-    if total_tests >= 100: achievements.append("Century Club")
-    if best_wpm >= 50: achievements.append("Speed Demon")
-    if best_wpm >= 80: achievements.append("Typing Ninja")
-    if total_chars >= 10000: achievements.append("Word Warrior")
-    if total_chars >= 50000: achievements.append("Legend")
+    # Basic achievements
+    if total_tests >= 1: achievements.append("🚀 First Test")
+    if total_tests >= 10: achievements.append("🔥 10 Tests")
+    if total_tests >= 50: achievements.append("💯 50 Tests")
+    if total_tests >= 100: achievements.append("🏆 Century Club")
+    
+    # Speed achievements
+    if best_wpm >= 40: achievements.append("⚡ Speed Starter")
+    if best_wpm >= 60: achievements.append("💨 Fast Fingers")
+    if best_wpm >= 80: achievements.append("🌀 Typing Ninja")
+    if best_wpm >= 100: achievements.append("🚀 Speed Demon")
+    if best_wpm >= 120: achievements.append("👑 Typing Legend")
+    
+    # Accuracy achievements
+    if best_accuracy >= 95: achievements.append("🎯 Accuracy Master")
+    if best_accuracy >= 98: achievements.append("🔍 Perfectionist")
+    if best_accuracy == 100: achievements.append("💎 Flawless")
+    
+    # Volume achievements
+    if total_chars >= 10000: achievements.append("📚 Word Warrior")
+    if total_chars >= 50000: achievements.append("📖 Book Reader")
+    if total_chars >= 100000: achievements.append("🎓 Scholar")
+    
+    # Mode diversity
+    if len(modes_used) >= 3: achievements.append("🎮 Mode Explorer")
+    if len(modes_used) >= 5: achievements.append("🎪 Mode Master")
+    if "puzzle" in modes_used: achievements.append("🧩 Puzzle Solver")
+    if "code" in modes_used: achievements.append("💻 Code Warrior")
+    if "quote" in modes_used: achievements.append("💭 Quote Master")
+    
+    # Consistency achievements
+    if avg_wpm >= 50 and total_tests >= 20: achievements.append("📈 Consistent")
+    if avg_wpm >= 70 and total_tests >= 20: achievements.append("📊 Reliable")
+    
+    # Special achievements
+    high_score_games = sum(1 for r in runs if r.get("wpm", 0) >= 80)
+    if high_score_games >= 10: achievements.append("🌟 High Scorer")
     
     return achievements
 
@@ -437,6 +488,14 @@ def api_sentences():
         # Return a famous quote
         quote = get_random_quote(language)
         return jsonify({"text": quote, "mode": mode, "length": length})
+    elif mode == "puzzle":
+        # Return scrambled words to unscramble
+        puzzle_text = get_puzzle_text(length, language)
+        return jsonify({"text": puzzle_text, "mode": mode, "length": length})
+    elif mode == "code":
+        # Return programming code snippet
+        code_text = get_code_snippet(language)
+        return jsonify({"text": code_text, "mode": mode, "length": length})
     elif mode == "custom":
         custom_text = request.args.get("custom_text", "")
         if custom_text:
@@ -521,6 +580,51 @@ def get_random_quote(language):
     }
     lang_quotes = quotes.get(language.lower(), quotes['english'])
     return random.choice(lang_quotes)
+
+def get_puzzle_text(length, language):
+    # Generate scrambled words for puzzle mode
+    words = [
+        "python", "javascript", "algorithm", "database", "function", "variable", "array", "object",
+        "class", "method", "inheritance", "polymorphism", "recursion", "iteration", "condition",
+        "boolean", "string", "integer", "float", "character", "pointer", "memory", "stack", "queue"
+    ]
+    
+    word_count = min(int(length) if length.isdigit() else 10, len(words))
+    selected_words = random.sample(words, word_count)
+    
+    # Scramble each word
+    scrambled = []
+    for word in selected_words:
+        scrambled_word = ''.join(random.sample(word, len(word)))
+        scrambled.append(f"{scrambled_word} ({word})")
+    
+    return "Unscramble: " + " | ".join(scrambled)
+
+def get_code_snippet(language):
+    # Return programming code snippets
+    code_snippets = {
+        "python": [
+            "def fibonacci(n):\n    if n <= 1:\n        return n\n    else:\n        return fibonacci(n-1) + fibonacci(n-2)",
+            "class Rectangle:\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    \n    def area(self):\n        return self.width * self.height",
+            "import requests\nresponse = requests.get('https://api.example.com/data')\nprint(response.json())",
+            "numbers = [1, 2, 3, 4, 5]\nsquared = [x**2 for x in numbers if x % 2 == 0]\nprint(squared)"
+        ],
+        "javascript": [
+            "function fetchData(url) {\n    return fetch(url)\n        .then(response => response.json())\n        .then(data => console.log(data));\n}",
+            "const numbers = [1, 2, 3, 4, 5];\nconst evenNumbers = numbers.filter(num => num % 2 === 0);\nconsole.log(evenNumbers);",
+            "class Person {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n    \n    greet() {\n        return `Hello, my name is ${this.name}`;\n    }\n}",
+            "const promise = new Promise((resolve, reject) => {\n    setTimeout(() => resolve('Done!'), 1000);\n});\npromise.then(result => console.log(result));"
+        ],
+        "english": [
+            "function calculateSum(a, b) {\n    return a + b;\n}\n\nconst result = calculateSum(5, 3);\nconsole.log(result);",
+            "const users = [\n    { name: 'Alice', age: 25 },\n    { name: 'Bob', age: 30 }\n];\n\nconst names = users.map(user => user.name);\nconsole.log(names);",
+            "try {\n    const data = JSON.parse(jsonString);\n    console.log(data);\n} catch (error) {\n    console.error('Invalid JSON:', error);\n}",
+            "const button = document.querySelector('#myButton');\nbutton.addEventListener('click', () => {\n    alert('Button clicked!');\n});"
+        ]
+    }
+    
+    lang_snippets = code_snippets.get(language.lower(), code_snippets['english'])
+    return random.choice(lang_snippets)
 
 def enhance_sentence(sentence, punctuation, numbers):
     # Simple enhancement - add some punctuation and numbers
@@ -674,6 +778,25 @@ def multiplayer(level):
         return redirect(url_for("upgrade"))
 
     return render_template("multiplayer.html", level=level, allowed_levels=allowed_levels, user=user)
+
+@app.route("/tournament/<level>")
+def tournament(level):
+    user = current_user()
+    if not user:
+        flash("Login first", "error")
+        return redirect(url_for("login"))
+
+    # Only premium plus can access tournaments
+    if user["plan"] != "premium_plus":
+        flash("Tournaments are Premium Plus only", "error")
+        return redirect(url_for("upgrade"))
+
+    allowed_levels = ["beginner", "intermediate", "advanced", "expert"]
+    if level not in allowed_levels:
+        flash("Invalid tournament level", "error")
+        return redirect(url_for("upgrade"))
+
+    return render_template("tournament.html", level=level, user=user)
 
 
 
@@ -858,6 +981,173 @@ def calculate_level(user_data, levels_data):
         if min_wpm <= wpm <= max_wpm and wins >= 3:
             return name
     return current or "beginner"
+
+# -----------------------------------------------------
+# Tournament SocketIO Events
+# -----------------------------------------------------
+@socketio.on("join_tournament")
+def handle_join_tournament(data):
+    sid = flask_request.sid
+    level = data.get("level", "beginner")
+    username = data.get("username")
+    
+    room = f"tournament_{level}"
+    
+    if room not in active_tournaments:
+        active_tournaments[room] = {
+            "players": [],
+            "status": "waiting",
+            "current_round": 0,
+            "total_rounds": 3,
+            "sentences": [],
+            "results": []
+        }
+    
+    tournament = active_tournaments[room]
+    
+    # Add player if not already in
+    player_exists = any(p["username"] == username for p in tournament["players"])
+    if not player_exists:
+        tournament["players"].append({
+            "username": username,
+            "sid": sid,
+            "wpm": 0,
+            "status": "waiting",
+            "ready": False
+        })
+    
+    join_room(room)
+    emit("tournament_update", tournament, room=room)
+    emit("tournament_message", f"Welcome to {level} tournament! Waiting for players...", room=sid)
+
+@socketio.on("tournament_ready")
+def handle_tournament_ready(data):
+    sid = flask_request.sid
+    ready = data.get("ready", False)
+    
+    # Find player's tournament
+    for room, tournament in active_tournaments.items():
+        for player in tournament["players"]:
+            if player["sid"] == sid:
+                player["ready"] = ready
+                
+                # Check if all players are ready
+                all_ready = all(p["ready"] for p in tournament["players"])
+                if all_ready and len(tournament["players"]) >= 2 and tournament["status"] == "waiting":
+                    start_tournament_round(room)
+                break
+
+@socketio.on("tournament_progress")
+def handle_tournament_progress(data):
+    sid = flask_request.sid
+    progress = data.get("progress", 0)
+    
+    for room, tournament in active_tournaments.items():
+        for player in tournament["players"]:
+            if player["sid"] == sid:
+                player["progress"] = progress
+                emit("tournament_update", tournament, room=room)
+                break
+
+@socketio.on("tournament_finish")
+def handle_tournament_finish(data):
+    sid = flask_request.sid
+    wpm = data.get("wpm", 0)
+    
+    for room, tournament in active_tournaments.items():
+        for player in tournament["players"]:
+            if player["sid"] == sid:
+                player["wpm"] = wpm
+                player["status"] = "finished"
+                
+                # Check if round is complete
+                finished_players = [p for p in tournament["players"] if p["status"] == "finished"]
+                if len(finished_players) == len(tournament["players"]):
+                    end_tournament_round(room)
+                break
+
+@socketio.on("leave_tournament")
+def handle_leave_tournament():
+    sid = flask_request.sid
+    
+    for room, tournament in active_tournaments.items():
+        tournament["players"] = [p for p in tournament["players"] if p["sid"] != sid]
+        
+        if len(tournament["players"]) == 0:
+            del active_tournaments[room]
+        else:
+            emit("tournament_update", tournament, room=room)
+        break
+    
+    leave_room(room)
+
+def start_tournament_round(room):
+    tournament = active_tournaments[room]
+    tournament["status"] = "active"
+    tournament["current_round"] += 1
+    
+    # Get a random sentence
+    sentences = load_json(SENTENCES_FILE, {}).get("sentences", [])
+    if sentences:
+        sentence = random.choice(sentences).get("text", "The quick brown fox jumps over the lazy dog.")
+    else:
+        sentence = "The quick brown fox jumps over the lazy dog."
+    
+    tournament["current_sentence"] = sentence
+    
+    # Reset player status
+    for player in tournament["players"]:
+        player["status"] = "typing"
+        player["progress"] = 0
+        player["wpm"] = 0
+    
+    emit("round_start", {"sentence": sentence}, room=room)
+    emit("tournament_message", f"Round {tournament['current_round']} starting!", room=room)
+
+def end_tournament_round(room):
+    tournament = active_tournaments[room]
+    
+    # Sort players by WPM
+    sorted_players = sorted(tournament["players"], key=lambda p: p["wpm"], reverse=True)
+    
+    # Mark winner
+    if sorted_players:
+        sorted_players[0]["status"] = "winner"
+    
+    tournament["results"].append({
+        "round": tournament["current_round"],
+        "winners": [p["username"] for p in sorted_players[:len(sorted_players)//2]]
+    })
+    
+    emit("tournament_update", tournament, room=room)
+    
+    # Check if tournament is complete
+    if tournament["current_round"] >= tournament["total_rounds"]:
+        end_tournament(room)
+    else:
+        # Start next round after delay
+        socketio.sleep(5)
+        start_tournament_round(room)
+
+def end_tournament(room):
+    tournament = active_tournaments[room]
+    tournament["status"] = "finished"
+    
+    # Determine final winner
+    final_scores = {}
+    for result in tournament["results"]:
+        for winner in result["winners"]:
+            final_scores[winner] = final_scores.get(winner, 0) + 1
+    
+    final_winner = max(final_scores, key=final_scores.get) if final_scores else None
+    
+    emit("tournament_message", f"Tournament finished! Winner: {final_winner}", room=room)
+    
+    # Clean up after delay
+    socketio.sleep(10)
+    if room in active_tournaments:
+        del active_tournaments[room]
+
 @app.route("/api/user")
 def api_user():
     """Returns the currently logged-in user (for JS to sync state)."""
@@ -949,4 +1239,4 @@ def api_history():
 # -----------------------------------------------------
 if __name__ == "__main__":
     print("Starting TypeForge with levels + multiplayer")
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+    socketio.run(app, host="127.0.0.1", port=5000, debug=False)

@@ -21,6 +21,7 @@
     .achievements { margin-bottom:40px; }
     .achievement { background:#222; padding:10px; border-radius:8px; margin:5px 0; }
     .recent-runs { background:#1b1b1b; padding:20px; border-radius:12px; }
+    .recent-runs.global-activity { background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #00ffcc; }
     .run { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #333; }
     .run:last-child { border-bottom:none; }
   </style>
@@ -100,6 +101,19 @@
         <span>WPM: {{ run.wpm }}</span>
         <span>Accuracy: {{ run.accuracy }}%</span>
         <span>Time: {{ run.time }}s</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="recent-runs global-activity">
+    <h3>🌍 Global Activity</h3>
+    {% for activity in global_activity %}
+      <div class="run">
+        <span><strong>{{ activity.username }}</strong></span>
+        <span>{{ activity.wpm }} WPM</span>
+        <span>{{ activity.accuracy }}% acc</span>
+        <span>{{ activity.mode }}</span>
+        <span>{{ activity.date }}</span>
       </div>
     {% endfor %}
   </div>

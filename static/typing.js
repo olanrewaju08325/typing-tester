@@ -18,7 +18,7 @@
   function $id(id) { return $('#' + id); }
 
   // config / state
-  const testModes = { time: 'Time', words: 'Words', quote: 'Quote', zen: 'Zen', practice: 'Practice', challenge: 'Challenge' };
+  const testModes = { time: 'Time', words: 'Words', quote: 'Quote', zen: 'Zen', practice: 'Practice', challenge: 'Challenge', puzzle: 'Puzzle', code: 'Code' };
   let currentMode = 'time';
   let currentLength = 30;
   let currentLanguage = 'english';
@@ -286,6 +286,14 @@
           finishTyping();
         }
       }, 1000);
+    } else if (currentMode === 'puzzle') {
+      // Puzzle mode - unscramble words
+      $timeLeft.text('Puzzle Mode');
+      $progressBar.css('width', '100%');
+    } else if (currentMode === 'code') {
+      // Code mode - programming snippets
+      $timeLeft.text('Code Mode');
+      $progressBar.css('width', '100%');
     }
 
     // sample WPM every second

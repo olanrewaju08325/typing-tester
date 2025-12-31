@@ -61,8 +61,7 @@
       {% elif current_user.plan == 'premium' %}
         <a href="{{ url_for('multiplayer', level='beginner') }}" class="btn">Enter Beginner Multiplayer</a>
       {% elif current_user.plan == 'premium_plus' %}
-        <a href="{{ url_for('multiplayer') }}" class="btn">Enter Multiplayer</a>
-      {% endif %}
+        <a href="{{ url_for('multiplayer') }}" class="btn">Enter Multiplayer</a>        <a href="{{ url_for('tournament', level='beginner') }}" class="btn">🏆 Tournament</a>      {% endif %}
 
       <a href="{{ url_for('upgrade') }}">💎 Upgrade</a>
       <a href="{{ url_for('logout') }}">🚪 Logout</a>
@@ -85,6 +84,8 @@
           <option value="zen">Zen</option>
           <option value="practice">Practice</option>
           <option value="challenge">Challenge</option>
+          <option value="puzzle">Puzzle</option>
+          <option value="code">Code</option>
           <option value="custom">Custom</option>
         </select>
         <select id="test-length">
